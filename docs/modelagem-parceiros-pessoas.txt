@@ -1,0 +1,48 @@
+Proposta de modelagem: parceiros e pessoas nas viagens
+=======================================================
+
+Problema atual
+--------------
+As colunas `grupo`, `grupo_complemento`, `responsavel_grupo` e `coordenador`
+da tabela `viagens` guardam tudo como texto solto. Isso impede:
+- uma viagem ter 1, 2 ou mais parceiros (igrejas/organizações) de forma estruturada;
+- saber quem participou de cada viagem (coordenador, médicos, dentistas,
+  voluntários etc.) para usar nos relatórios.
+
+Modelagem proposta
+-------------------
+
+parceiros (igrejas/organizações que participam das viagens)
+- id
+- nome
+- tipo (igreja, agência missionária, universidade...)
+- cidade
+- estado_pais
+- observacoes
+
+viagem_parceiros (tabela de ligação — resolve o "1, 2 ou mais parceiros por viagem")
+- viagem_id
+- parceiro_id
+
+pessoas (coordenadores, médicos, dentistas, voluntários...)
+- id
+- nome
+- cargo (função/profissão da pessoa: Pastor, Médico, Dentista, Voluntário, Evangelista...)
+
+viagem_pessoas (liga pessoas às viagens, com o papel específico naquela viagem)
+- viagem_id
+- pessoa_id
+- papel_na_viagem (ex.: "Coordenador desta viagem" — pode ser diferente do cargo padrão da pessoa)
+
+A tabela `viagens` continua existindo como está, só deixa de depender do texto
+solto de responsável/coordenador, que passa a vir dessas relações. Assim os
+relatórios futuros conseguem listar quem foi em cada viagem, contar quantos
+médicos/dentistas foram no ano, etc.
+
+Perguntas em aberto para decidir antes de implementar
+-------------------------------------------------------
+1. `cargo` deveria ser uma lista fixa (Pastor, Médico, Dentista, Voluntário,
+   Coordenador...) ou texto livre?
+2. Migramos os dados que já existem (responsavel_grupo, coordenador, grupo,
+   grupo_complemento) automaticamente para essas novas tabelas, ou começamos
+   as novas viagens já no modelo novo e deixamos as antigas como estão?
