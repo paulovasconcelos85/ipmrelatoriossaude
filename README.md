@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# IPM Relatórios Saúde
 
-## Getting Started
+Sistema de relatórios do IPM. A primeira página apresenta o **Calendário de Viagens 2026** de forma
+simples, mobile-first e com letra grande/ajustável (pensado para uso por pessoas idosas).
 
-First, run the development server:
+## Rodando localmente
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Sem configurar o Supabase, a página funciona normalmente usando os dados de exemplo em
+`src/lib/viagens-fallback.ts` (gerados a partir da planilha original).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Conectando ao Supabase
 
-## Learn More
+1. Copie `.env.local.example` para `.env.local`.
+2. Preencha `NEXT_PUBLIC_SUPABASE_ANON_KEY` com a *anon key* do projeto (Supabase → Project Settings → API).
+3. No SQL Editor do Supabase, rode nesta ordem:
+   - `supabase/schema.sql` — cria a tabela `viagens` com leitura pública.
+   - `supabase/seed.sql` — popula a tabela com os dados do calendário 2026.
+4. Reinicie `npm run dev`. A página passa a buscar os dados diretamente do Supabase.
 
-To learn more about Next.js, take a look at the following resources:
+### Erro "self-signed certificate in certificate chain" ao rodar localmente
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Em redes corporativas com proxy que inspeciona HTTPS (ex.: notebook do trabalho), o Node pode
+rejeitar o certificado do Supabase mesmo com internet funcionando normalmente (o `curl`/navegador
+funcionam porque usam o repositório de certificados do Windows, que já confia no proxy; o Node não usa
+esse repositório por padrão). Nesse caso a página cai silenciosamente para os dados locais de exemplo.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Solução: rode o dev server pedindo para o Node confiar no certificado do sistema operacional:
 
-## Deploy on Vercel
+```bash
+NODE_OPTIONS="--use-system-ca" npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Isso não é necessário em produção (Vercel, etc.), só em redes com esse tipo de proxy.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Estrutura
+
+- `src/app/page.tsx` — página do calendário de viagens.
+- `src/components/FontSizeControl.tsx` — botões A-/A/A+ para ajustar o tamanho da letra (fica salvo no navegador).
+- `src/lib/viagens.ts` — busca os dados no Supabase, com fallback local.
+- `src/lib/format.ts` — formatação de datas e cálculo do status da viagem (já aconteceu / em andamento / programada) comparando com a data atual.
+- `supabase/` — SQL de schema e seed da tabela `viagens`.
