@@ -1,4 +1,5 @@
 import FontSizeControl from '@/components/FontSizeControl';
+import ScrollToAtual from '@/components/ScrollToAtual';
 import { getViagens } from '@/lib/viagens';
 import {
   calcularStatus,
@@ -41,8 +42,13 @@ export default async function Home() {
   }
   const meses = [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b));
 
+  const viagemAtual = viagens.find(
+    (v) => calcularStatus(v.data_saida, v.data_retorno) !== 'realizada',
+  );
+
   return (
     <>
+      <ScrollToAtual />
       <header className="sticky top-0 z-10 bg-blue-900 px-4 py-4 shadow-md">
         <div className="mx-auto flex max-w-2xl flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
@@ -51,11 +57,18 @@ export default async function Home() {
             </h1>
             <FontSizeControl />
           </div>
-          <p className="text-sm text-blue-100">Toque em A+ para aumentar o tamanho da letra</p>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-blue-100">
+            <span>Toque em A+ para aumentar o tamanho da letra</span>
+            {viagemAtual && (
+              <a href="#topo" className="font-semibold underline underline-offset-2">
+                Ver viagens anteriores ↑
+              </a>
+            )}
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-16 pt-6">
+      <main id="topo" className="scroll-mt-24 mx-auto w-full max-w-2xl flex-1 px-4 pb-16 pt-6">
         {usandoDadosLocais && (
           <p className="mb-6 rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-base text-amber-900">
             Mostrando dados locais de exemplo. Configure o Supabase para ver os dados sempre atualizados.
@@ -72,16 +85,18 @@ export default async function Home() {
               {viagensDoMes.map((viagem, i) => {
                 const status = calcularStatus(viagem.data_saida, viagem.data_retorno);
                 const config = STATUS_CONFIG[status];
+                const ehAtual = viagem === viagemAtual;
                 return (
                 <li
                   key={`${viagem.data_saida}-${i}`}
-                  className={`rounded-2xl border-2 bg-white p-5 shadow-sm ${
+                  id={ehAtual ? 'viagem-atual' : undefined}
+                  className={`scroll-mt-36 rounded-2xl border-2 bg-white p-5 shadow-sm ${
                     viagem.cancelada
                       ? 'border-red-300 opacity-80'
                       : status === 'realizada'
                         ? `${config.borda} opacity-70`
                         : config.borda
-                  }`}
+                  } ${ehAtual ? 'ring-4 ring-blue-300' : ''}`}
                 >
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <p className="text-lg font-bold text-blue-900 sm:text-xl">
