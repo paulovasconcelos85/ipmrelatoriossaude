@@ -17,10 +17,11 @@ export type Viagem = {
 export async function getViagens(): Promise<{ viagens: Viagem[]; usandoDadosLocais: boolean }> {
   if (supabaseConfigured && supabase) {
     const { data, error } = await supabase
-      .from('viagens')
+      .from('viagens_calendario')
       .select(
         'data_saida, data_retorno, regiao_rio, responsavel_grupo, grupo, grupo_complemento, coordenador, barco_local, observacoes, cancelada',
       )
+      .eq('origem', 'calendario_2026')
       .order('data_saida', { ascending: true });
 
     if (!error && data) {

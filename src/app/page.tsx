@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import FontSizeControl from '@/components/FontSizeControl';
 import ScrollToAtual from '@/components/ScrollToAtual';
 import { getViagens } from '@/lib/viagens';
@@ -59,6 +60,9 @@ export default async function Home() {
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-blue-100">
             <span>Toque em A+ para aumentar o tamanho da letra</span>
+            <Link href="/viagens" className="font-semibold underline underline-offset-2">
+              IPM Maria (viagens e atendimentos) →
+            </Link>
             {viagemAtual && (
               <a href="#topo" className="font-semibold underline underline-offset-2">
                 Ver viagens anteriores ↑

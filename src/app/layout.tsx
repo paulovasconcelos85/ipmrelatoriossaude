@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Calendário de Viagens 2026 · IPM Saúde",
+  title: "Calendário de Viagens 2026 · IPM Maria",
   description: "Calendário de viagens missionárias e agenda de equipes 2026",
 };
 

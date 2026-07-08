@@ -1,7 +1,8 @@
-# IPM Relatórios Saúde
+# IPM Maria
 
-Sistema de relatórios do IPM. A primeira página apresenta o **Calendário de Viagens 2026** de forma
-simples, mobile-first e com letra grande/ajustável (pensado para uso por pessoas idosas).
+Sistema de relatórios do IPM, em homenagem a Maria do Carmo. A primeira página apresenta o
+**Calendário de Viagens 2026** de forma simples, mobile-first e com letra grande/ajustável
+(pensado para uso por pessoas idosas).
 
 ## Rodando localmente
 
