@@ -2,10 +2,10 @@
 
 import { useActionState, useState, type ChangeEvent } from 'react';
 import { useFormStatus } from 'react-dom';
-import { criarViagemIpm } from '../actions';
+import { atualizarViagemIpm } from '../actions';
 import { ATENDIMENTOS_GRUPOS } from '@/lib/atendimentos-fields';
 import { atualizarListaDinamica, atualizarListaVoluntarios, type LinhaVoluntario } from '@/lib/campos-dinamicos';
-import type { Lookup, Profissional } from '@/lib/viagens-ipm';
+import type { Lookup, Profissional, ViagemIpm } from '@/lib/viagens-ipm';
 
 function BotaoSalvar() {
   const { pending } = useFormStatus();
@@ -15,12 +15,13 @@ function BotaoSalvar() {
       disabled={pending}
       className="rounded-full bg-blue-900 px-6 py-3 text-base font-bold text-white shadow-sm disabled:opacity-60"
     >
-      {pending ? 'Salvando...' : 'Salvar viagem'}
+      {pending ? 'Salvando...' : 'Salvar alterações'}
     </button>
   );
 }
 
-export default function NovaViagemForm({
+export default function EditarViagemForm({
+  viagem,
   tiposTransporte,
   barcos,
   parceiros,
@@ -31,6 +32,7 @@ export default function NovaViagemForm({
   locais,
   funcoesVoluntario,
 }: {
+  viagem: ViagemIpm;
   tiposTransporte: Lookup[];
   barcos: Lookup[];
   parceiros: Lookup[];
@@ -41,25 +43,34 @@ export default function NovaViagemForm({
   locais: string[];
   funcoesVoluntario: string[];
 }) {
-  const [estado, formAction] = useActionState(criarViagemIpm, undefined);
-  const [tipoTransporte, setTipoTransporte] = useState('');
+  const [estado, formAction] = useActionState(atualizarViagemIpm, undefined);
+  const [tipoTransporte, setTipoTransporte] = useState(viagem.tipo_transporte ?? '');
   const ehTransporteAquatico = tipoTransporte.trim().toLowerCase() === 'barco';
 
-  const [parceirosDigitados, setParceirosDigitados] = useState<string[]>(['']);
+  const [parceirosDigitados, setParceirosDigitados] = useState<string[]>(
+    viagem.parceiros.length > 0 ? [...viagem.parceiros, ''] : [''],
+  );
 
   function alterarParceiro(index: number, valor: string) {
     setParceirosDigitados((atual) => atualizarListaDinamica(atual, index, valor));
   }
 
-  const [comunidadesDigitadas, setComunidadesDigitadas] = useState<string[]>(['']);
+  const [comunidadesDigitadas, setComunidadesDigitadas] = useState<string[]>(
+    viagem.comunidades.length > 0 ? [...viagem.comunidades, ''] : [''],
+  );
 
   function alterarComunidade(index: number, valor: string) {
     setComunidadesDigitadas((atual) => atualizarListaDinamica(atual, index, valor));
   }
 
-  const [voluntariosDigitados, setVoluntariosDigitados] = useState<LinhaVoluntario[]>([
-    { nome: '', funcao: '', observacao: '' },
-  ]);
+  const [voluntariosDigitados, setVoluntariosDigitados] = useState<LinhaVoluntario[]>(
+    viagem.voluntarios.length > 0
+      ? [
+          ...viagem.voluntarios.map((v) => ({ nome: v.nome, funcao: v.funcao ?? '', observacao: v.observacao ?? '' })),
+          { nome: '', funcao: '', observacao: '' },
+        ]
+      : [{ nome: '', funcao: '', observacao: '' }],
+  );
 
   function alterarVoluntario(index: number, campo: keyof LinhaVoluntario, valor: string) {
     setVoluntariosDigitados((atual) => atualizarListaVoluntarios(atual, index, campo, valor));
@@ -84,6 +95,8 @@ export default function NovaViagemForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-8">
+      <input type="hidden" name="viagem_id" value={viagem.id} />
+
       {estado?.erro && (
         <p className="rounded-xl border-2 border-red-300 bg-red-50 px-4 py-3 text-base text-red-900">
           {estado.erro}
@@ -99,6 +112,7 @@ export default function NovaViagemForm({
               type="date"
               name="data_saida"
               required
+              defaultValue={viagem.data_saida}
               className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
             />
           </label>
@@ -107,6 +121,7 @@ export default function NovaViagemForm({
             <input
               type="date"
               name="data_chegada"
+              defaultValue={viagem.data_chegada ?? ''}
               className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
             />
           </label>
@@ -116,6 +131,7 @@ export default function NovaViagemForm({
               type="text"
               name="tipo_missao"
               list="lista-tipos-missao"
+              defaultValue={viagem.tipo_missao ?? ''}
               placeholder="Viagem de barco, Avanço Missionário, Ação missionária..."
               autoComplete="off"
               className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
@@ -132,6 +148,7 @@ export default function NovaViagemForm({
               type="text"
               name="area"
               list="lista-areas"
+              defaultValue={viagem.area ?? ''}
               placeholder="Rio Negro, Baixo Amazonas..."
               autoComplete="off"
               className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
@@ -148,6 +165,7 @@ export default function NovaViagemForm({
               type="text"
               name="local"
               list="lista-locais"
+              defaultValue={viagem.local ?? ''}
               autoComplete="off"
               className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
             />
@@ -178,6 +196,10 @@ export default function NovaViagemForm({
               ))}
             </datalist>
           </div>
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 sm:col-span-2">
+            <input type="checkbox" name="cancelada" defaultChecked={viagem.cancelada} />
+            Viagem cancelada
+          </label>
         </div>
       </section>
 
@@ -190,9 +212,9 @@ export default function NovaViagemForm({
               type="text"
               name="tipo_transporte"
               list="lista-tipos-transporte"
-              autoComplete="off"
               value={tipoTransporte}
               onChange={(e) => setTipoTransporte(e.target.value)}
+              autoComplete="off"
               className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
             />
             <datalist id="lista-tipos-transporte">
@@ -208,6 +230,7 @@ export default function NovaViagemForm({
                 type="text"
                 name="barco"
                 list="lista-barcos"
+                defaultValue={viagem.barco ?? ''}
                 autoComplete="off"
                 className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
               />
@@ -230,6 +253,7 @@ export default function NovaViagemForm({
               type="text"
               name="coordenador"
               list="lista-profissionais"
+              defaultValue={viagem.coordenador ?? ''}
               autoComplete="off"
               className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
             />
@@ -240,6 +264,7 @@ export default function NovaViagemForm({
               type="text"
               name="lider"
               list="lista-profissionais"
+              defaultValue={viagem.lider_saude ?? ''}
               autoComplete="off"
               className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
             />
@@ -364,6 +389,7 @@ export default function NovaViagemForm({
         <textarea
           name="observacoes"
           rows={3}
+          defaultValue={viagem.observacoes ?? ''}
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
         />
       </section>
@@ -405,7 +431,7 @@ export default function NovaViagemForm({
                       type="number"
                       name={campo.name}
                       min={0}
-                      defaultValue={0}
+                      defaultValue={viagem.atendimentos[campo.name] ?? 0}
                       className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-slate-900"
                     />
                   </label>

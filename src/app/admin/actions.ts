@@ -12,14 +12,19 @@ import {
   resolverVoluntarios,
 } from '@/lib/form-helpers';
 
-export type EstadoNovaViagem = { erro?: string } | undefined;
+export type EstadoEditarViagem = { erro?: string } | undefined;
 
-export async function criarViagemIpm(
-  _estadoAnterior: EstadoNovaViagem,
+export async function atualizarViagemIpm(
+  _estadoAnterior: EstadoEditarViagem,
   formData: FormData,
-): Promise<EstadoNovaViagem> {
+): Promise<EstadoEditarViagem> {
   if (!supabaseConfigured || !supabase) {
     return { erro: 'Supabase não está configurado neste ambiente.' };
+  }
+
+  const viagemId = textoOuNulo(formData.get('viagem_id'));
+  if (!viagemId) {
+    return { erro: 'Viagem inválida.' };
   }
 
   const dataSaida = textoOuNulo(formData.get('data_saida'));
@@ -34,6 +39,7 @@ export async function criarViagemIpm(
     const area = textoOuNulo(formData.get('area'));
     const local = textoOuNulo(formData.get('local'));
     const observacoes = textoOuNulo(formData.get('observacoes'));
+    const cancelada = formData.get('cancelada') === 'on';
     const ano = parseInt(dataSaida.slice(0, 4), 10);
 
     const tipoTransporte = textoOuNulo(formData.get('tipo_transporte'));
@@ -77,11 +83,9 @@ export async function criarViagemIpm(
 
     const voluntarios = await resolverVoluntarios(formData);
 
-    const { data: viagemCriada, error: erroViagem } = await supabase
+    const { error: erroViagem } = await supabase
       .from('viagens')
-      .insert({
-        origem: 'sistema_ipm',
-        numero: null,
+      .update({
         ano,
         data_saida: dataSaida,
         data_chegada: dataChegada,
@@ -93,17 +97,22 @@ export async function criarViagemIpm(
         local,
         coordenador_id: coordenadorId,
         lider_saude_id: liderId,
-        cancelada: false,
+        cancelada,
         observacoes,
       })
-      .select('id')
-      .single();
+      .eq('id', viagemId);
 
-    if (erroViagem || !viagemCriada) {
-      return { erro: `Não foi possível salvar a viagem: ${erroViagem?.message ?? 'erro desconhecido'}` };
+    if (erroViagem) {
+      return { erro: `Não foi possível salvar a viagem: ${erroViagem.message}` };
     }
 
-    const viagemId = viagemCriada.id as string;
+    const { error: erroRemoverParceiros } = await supabase
+      .from('viagem_parceiros')
+      .delete()
+      .eq('viagem_id', viagemId);
+    if (erroRemoverParceiros) {
+      return { erro: `Viagem salva, mas houve erro ao atualizar parceiros: ${erroRemoverParceiros.message}` };
+    }
 
     if (todosParceirosIds.length > 0) {
       const linhas = todosParceirosIds.map((parceiroId, i) => ({
@@ -117,6 +126,14 @@ export async function criarViagemIpm(
       }
     }
 
+    const { error: erroRemoverComunidades } = await supabase
+      .from('viagem_comunidades')
+      .delete()
+      .eq('viagem_id', viagemId);
+    if (erroRemoverComunidades) {
+      return { erro: `Viagem salva, mas houve erro ao atualizar comunidades: ${erroRemoverComunidades.message}` };
+    }
+
     if (todasComunidadesIds.length > 0) {
       const linhas = todasComunidadesIds.map((comunidadeId, i) => ({
         viagem_id: viagemId,
@@ -127,6 +144,14 @@ export async function criarViagemIpm(
       if (erroComunidades) {
         return { erro: `Viagem salva, mas houve erro ao vincular comunidades: ${erroComunidades.message}` };
       }
+    }
+
+    const { error: erroRemoverVoluntarios } = await supabase
+      .from('viagem_voluntarios')
+      .delete()
+      .eq('viagem_id', viagemId);
+    if (erroRemoverVoluntarios) {
+      return { erro: `Viagem salva, mas houve erro ao atualizar a equipe: ${erroRemoverVoluntarios.message}` };
     }
 
     if (voluntarios.length > 0) {
@@ -142,10 +167,9 @@ export async function criarViagemIpm(
       metricas[campo.name] = inteiroOuNulo(formData.get(campo.name));
     }
 
-    const { error: erroAtendimentos } = await supabase.from('atendimentos').insert({
-      viagem_id: viagemId,
-      ...metricas,
-    });
+    const { error: erroAtendimentos } = await supabase
+      .from('atendimentos')
+      .upsert({ viagem_id: viagemId, ...metricas });
     if (erroAtendimentos) {
       return { erro: `Viagem salva, mas houve erro ao salvar os atendimentos: ${erroAtendimentos.message}` };
     }
@@ -153,6 +177,19 @@ export async function criarViagemIpm(
     return { erro: err instanceof Error ? err.message : 'Erro inesperado ao salvar a viagem.' };
   }
 
+  revalidatePath('/admin');
   revalidatePath('/viagens');
-  redirect('/viagens');
+  redirect('/admin');
+}
+
+export async function excluirViagemIpm(viagemId: string): Promise<void> {
+  if (!supabaseConfigured || !supabase) return;
+
+  const { error } = await supabase.from('viagens').delete().eq('id', viagemId);
+  if (error) {
+    throw new Error(`Não foi possível excluir a viagem: ${error.message}`);
+  }
+
+  revalidatePath('/admin');
+  revalidatePath('/viagens');
 }

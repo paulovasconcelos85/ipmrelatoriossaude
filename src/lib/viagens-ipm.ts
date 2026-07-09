@@ -2,6 +2,7 @@ import { supabase, supabaseConfigured } from './supabase/client';
 
 export type Lookup = { id: string; nome: string };
 export type Profissional = { id: string; nome: string; cargo: string | null };
+export type Parceiro = { id: string; nome: string; cidade: string | null; pais: string | null };
 export type Voluntario = { nome: string; funcao: string | null; observacao: string | null };
 
 export type ViagemIpm = {
@@ -28,6 +29,13 @@ export type ViagemIpm = {
   /** Todas as colunas numéricas de public.atendimentos, exceto viagem_id. */
   atendimentos: Record<string, number | null>;
   atendimentosObservacoes: string | null;
+  /** IDs das FKs, usados para pré-selecionar campos no formulário de edição. */
+  tipo_transporte_id: string | null;
+  barco_id: string | null;
+  coordenador_id: string | null;
+  lider_saude_id: string | null;
+  parceiro_ids: string[];
+  comunidade_ids: string[];
 };
 
 type ViagemRow = {
@@ -42,34 +50,86 @@ type ViagemRow = {
   local: string | null;
   observacoes: string | null;
   cancelada: boolean;
+  tipo_transporte_id: string | null;
+  barco_id: string | null;
+  coordenador_id: string | null;
+  lider_saude_id: string | null;
   tipos_transporte: { nome: string } | null;
   barcos: { nome: string } | null;
   coordenador: { nome: string } | null;
   lider: { nome: string } | null;
-  viagem_parceiros: { posicao: number; parceiros: { nome: string } | null }[] | null;
-  viagem_comunidades: { comunidades: { nome: string } | null }[] | null;
+  viagem_parceiros: { posicao: number; parceiro_id: string; parceiros: { nome: string } | null }[] | null;
+  viagem_comunidades: { posicao: number; comunidade_id: string; comunidades: { nome: string } | null }[] | null;
   viagem_voluntarios:
     | { funcao: string | null; observacao: string | null; profissionais: { nome: string } | null }[]
     | null;
   atendimentos: (Record<string, number | null | string> & { viagem_id: string; observacoes: string | null }) | null;
 };
 
+const SELECT_VIAGEM = `id, numero, ano, data_saida, data_chegada, dias_missao, tipo_missao, area, local, observacoes, cancelada,
+       tipo_transporte_id,
+       barco_id,
+       coordenador_id,
+       lider_saude_id,
+       tipos_transporte(nome),
+       barcos(nome),
+       coordenador:profissionais!coordenador_id(nome),
+       lider:profissionais!lider_saude_id(nome),
+       viagem_parceiros(posicao, parceiro_id, parceiros(nome)),
+       viagem_comunidades(posicao, comunidade_id, comunidades(nome)),
+       viagem_voluntarios(funcao, observacao, profissionais(nome)),
+       atendimentos(*)`;
+
+function mapRow(row: ViagemRow): ViagemIpm {
+  const { observacoes: atendimentosObservacoes, ...resto } = row.atendimentos ?? { observacoes: null };
+  const metricas = { ...resto };
+  delete metricas.viagem_id;
+
+  const parceirosOrdenados = (row.viagem_parceiros ?? []).slice().sort((a, b) => a.posicao - b.posicao);
+  const comunidadesOrdenadas = (row.viagem_comunidades ?? []).slice().sort((a, b) => a.posicao - b.posicao);
+
+  return {
+    id: row.id,
+    numero: row.numero,
+    ano: row.ano,
+    data_saida: row.data_saida,
+    data_chegada: row.data_chegada,
+    dias_missao: row.dias_missao,
+    tipo_missao: row.tipo_missao,
+    area: row.area,
+    local: row.local,
+    observacoes: row.observacoes,
+    cancelada: row.cancelada,
+    tipo_transporte: row.tipos_transporte?.nome ?? null,
+    barco: row.barcos?.nome ?? null,
+    coordenador: row.coordenador?.nome ?? null,
+    lider_saude: row.lider?.nome ?? null,
+    parceiros: parceirosOrdenados.map((p) => p.parceiros?.nome).filter((nome): nome is string => Boolean(nome)),
+    comunidades: comunidadesOrdenadas.map((c) => c.comunidades?.nome).filter((nome): nome is string => Boolean(nome)),
+    voluntarios: (row.viagem_voluntarios ?? [])
+      .filter((v) => Boolean(v.profissionais?.nome))
+      .map((v) => ({
+        nome: v.profissionais!.nome,
+        funcao: v.funcao,
+        observacao: v.observacao,
+      })),
+    atendimentos: metricas as Record<string, number | null>,
+    atendimentosObservacoes: (atendimentosObservacoes as string | null) ?? null,
+    tipo_transporte_id: row.tipo_transporte_id,
+    barco_id: row.barco_id,
+    coordenador_id: row.coordenador_id,
+    lider_saude_id: row.lider_saude_id,
+    parceiro_ids: parceirosOrdenados.map((p) => p.parceiro_id),
+    comunidade_ids: comunidadesOrdenadas.map((c) => c.comunidade_id),
+  };
+}
+
 export async function listViagensIpm(): Promise<ViagemIpm[]> {
   if (!supabaseConfigured || !supabase) return [];
 
   const { data, error } = await supabase
     .from('viagens')
-    .select(
-      `id, numero, ano, data_saida, data_chegada, dias_missao, tipo_missao, area, local, observacoes, cancelada,
-       tipos_transporte(nome),
-       barcos(nome),
-       coordenador:profissionais!coordenador_id(nome),
-       lider:profissionais!lider_saude_id(nome),
-       viagem_parceiros(posicao, parceiros(nome)),
-       viagem_comunidades(comunidades(nome)),
-       viagem_voluntarios(funcao, observacao, profissionais(nome)),
-       atendimentos(*)`,
-    )
+    .select(SELECT_VIAGEM)
     .eq('origem', 'sistema_ipm')
     .order('data_saida', { ascending: false });
 
@@ -81,45 +141,21 @@ export async function listViagensIpm(): Promise<ViagemIpm[]> {
   }
   if (!data) return [];
 
-  return (data as unknown as ViagemRow[]).map((row) => {
-    const { observacoes: atendimentosObservacoes, ...resto } = row.atendimentos ?? { observacoes: null };
-    const metricas = { ...resto };
-    delete metricas.viagem_id;
+  return (data as unknown as ViagemRow[]).map(mapRow);
+}
 
-    return {
-      id: row.id,
-      numero: row.numero,
-      ano: row.ano,
-      data_saida: row.data_saida,
-      data_chegada: row.data_chegada,
-      dias_missao: row.dias_missao,
-      tipo_missao: row.tipo_missao,
-      area: row.area,
-      local: row.local,
-      observacoes: row.observacoes,
-      cancelada: row.cancelada,
-      tipo_transporte: row.tipos_transporte?.nome ?? null,
-      barco: row.barcos?.nome ?? null,
-      coordenador: row.coordenador?.nome ?? null,
-      lider_saude: row.lider?.nome ?? null,
-      parceiros: (row.viagem_parceiros ?? [])
-        .sort((a, b) => a.posicao - b.posicao)
-        .map((p) => p.parceiros?.nome)
-        .filter((nome): nome is string => Boolean(nome)),
-      comunidades: (row.viagem_comunidades ?? [])
-        .map((c) => c.comunidades?.nome)
-        .filter((nome): nome is string => Boolean(nome)),
-      voluntarios: (row.viagem_voluntarios ?? [])
-        .filter((v) => Boolean(v.profissionais?.nome))
-        .map((v) => ({
-          nome: v.profissionais!.nome,
-          funcao: v.funcao,
-          observacao: v.observacao,
-        })),
-      atendimentos: metricas as Record<string, number | null>,
-      atendimentosObservacoes: (atendimentosObservacoes as string | null) ?? null,
-    };
-  });
+export async function getViagemIpmPorId(id: string): Promise<ViagemIpm | null> {
+  if (!supabaseConfigured || !supabase) return null;
+
+  const { data, error } = await supabase.from('viagens').select(SELECT_VIAGEM).eq('id', id).maybeSingle();
+
+  if (error) {
+    console.error(`getViagemIpmPorId: erro ao consultar Supabase`, error);
+    return null;
+  }
+  if (!data) return null;
+
+  return mapRow(data as unknown as ViagemRow);
 }
 
 async function listLookup(table: string): Promise<Lookup[]> {
@@ -136,6 +172,7 @@ async function listLookup(table: string): Promise<Lookup[]> {
 export const listTiposTransporte = () => listLookup('tipos_transporte');
 export const listBarcos = () => listLookup('barcos');
 export const listParceiros = () => listLookup('parceiros');
+export const listComunidades = () => listLookup('comunidades');
 
 export async function listProfissionais(): Promise<Profissional[]> {
   if (!supabaseConfigured || !supabase) return [];
@@ -146,4 +183,57 @@ export async function listProfissionais(): Promise<Profissional[]> {
   }
   if (!data) return [];
   return data as Profissional[];
+}
+
+/** Lista de parceiros com os campos completos (cidade/país), usada na tela de cadastros. */
+export async function listParceirosCompletos(): Promise<Parceiro[]> {
+  if (!supabaseConfigured || !supabase) return [];
+  const { data, error } = await supabase.from('parceiros').select('id, nome, cidade, pais').order('nome');
+  if (error) {
+    console.error('listParceirosCompletos: erro ao consultar Supabase', error);
+    return [];
+  }
+  if (!data) return [];
+  return data as Parceiro[];
+}
+
+/**
+ * Valores já usados em `viagens.tipo_missao`/`area`/`local` (colunas de texto livre,
+ * sem tabela de apoio própria). Usado para sugerir autocompletar nos formulários,
+ * permitindo digitar um valor novo quando não houver correspondência.
+ */
+async function listValoresDistintos(coluna: 'tipo_missao' | 'area' | 'local'): Promise<string[]> {
+  if (!supabaseConfigured || !supabase) return [];
+  const { data, error } = await supabase.from('viagens').select(coluna).not(coluna, 'is', null);
+  if (error) {
+    console.error(`listValoresDistintos(${coluna}): erro ao consultar Supabase`, error);
+    return [];
+  }
+  if (!data) return [];
+  const valores = new Set<string>();
+  for (const row of data as unknown as Record<string, string | null>[]) {
+    const valor = row[coluna];
+    if (valor) valores.add(valor);
+  }
+  return Array.from(valores).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+
+export const listTiposMissao = () => listValoresDistintos('tipo_missao');
+export const listAreas = () => listValoresDistintos('area');
+export const listLocais = () => listValoresDistintos('local');
+
+/** Funções/cargos já usados em `viagem_voluntarios.funcao` (ex.: "médica", "TSB - odontologia"). */
+export async function listFuncoesVoluntario(): Promise<string[]> {
+  if (!supabaseConfigured || !supabase) return [];
+  const { data, error } = await supabase.from('viagem_voluntarios').select('funcao').not('funcao', 'is', null);
+  if (error) {
+    console.error('listFuncoesVoluntario: erro ao consultar Supabase', error);
+    return [];
+  }
+  if (!data) return [];
+  const valores = new Set<string>();
+  for (const row of data as unknown as { funcao: string | null }[]) {
+    if (row.funcao) valores.add(row.funcao);
+  }
+  return Array.from(valores).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 }

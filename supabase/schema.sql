@@ -85,8 +85,11 @@ create table if not exists public.viagem_parceiros (
 create table if not exists public.viagem_comunidades (
   viagem_id uuid not null references public.viagens (id) on delete cascade,
   comunidade_id uuid not null references public.comunidades (id) on delete cascade,
+  posicao smallint not null default 1,
   primary key (viagem_id, comunidade_id)
 );
+
+alter table public.viagem_comunidades add column if not exists posicao smallint not null default 1;
 
 -- Voluntários que participaram da viagem (preenchido manualmente no admin).
 -- Função e observação são específicas da participação naquela viagem
@@ -296,3 +299,38 @@ create policy "Permitir leitura publica de viagem_voluntarios" on public.viagem_
 
 drop policy if exists "Permitir leitura publica de atendimentos" on public.atendimentos;
 create policy "Permitir leitura publica de atendimentos" on public.atendimentos for select using (true);
+
+-- ---------------------------------------------------------------------------
+-- RLS: escrita pública (temporário, enquanto não há autenticação de admin)
+-- Necessário para as páginas "Nova viagem" e "/admin" (edição/exclusão).
+-- ---------------------------------------------------------------------------
+
+drop policy if exists "Permitir escrita publica de tipos_transporte" on public.tipos_transporte;
+create policy "Permitir escrita publica de tipos_transporte" on public.tipos_transporte for all using (true) with check (true);
+
+drop policy if exists "Permitir escrita publica de barcos" on public.barcos;
+create policy "Permitir escrita publica de barcos" on public.barcos for all using (true) with check (true);
+
+drop policy if exists "Permitir escrita publica de parceiros" on public.parceiros;
+create policy "Permitir escrita publica de parceiros" on public.parceiros for all using (true) with check (true);
+
+drop policy if exists "Permitir escrita publica de profissionais" on public.profissionais;
+create policy "Permitir escrita publica de profissionais" on public.profissionais for all using (true) with check (true);
+
+drop policy if exists "Permitir escrita publica de comunidades" on public.comunidades;
+create policy "Permitir escrita publica de comunidades" on public.comunidades for all using (true) with check (true);
+
+drop policy if exists "Permitir escrita publica de viagens" on public.viagens;
+create policy "Permitir escrita publica de viagens" on public.viagens for all using (true) with check (true);
+
+drop policy if exists "Permitir escrita publica de viagem_parceiros" on public.viagem_parceiros;
+create policy "Permitir escrita publica de viagem_parceiros" on public.viagem_parceiros for all using (true) with check (true);
+
+drop policy if exists "Permitir escrita publica de viagem_comunidades" on public.viagem_comunidades;
+create policy "Permitir escrita publica de viagem_comunidades" on public.viagem_comunidades for all using (true) with check (true);
+
+drop policy if exists "Permitir escrita publica de viagem_voluntarios" on public.viagem_voluntarios;
+create policy "Permitir escrita publica de viagem_voluntarios" on public.viagem_voluntarios for all using (true) with check (true);
+
+drop policy if exists "Permitir escrita publica de atendimentos" on public.atendimentos;
+create policy "Permitir escrita publica de atendimentos" on public.atendimentos for all using (true) with check (true);

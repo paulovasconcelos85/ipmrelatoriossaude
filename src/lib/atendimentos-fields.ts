@@ -8,11 +8,20 @@ export type AtendimentoField = {
 export type AtendimentoGrupo = {
   titulo: string;
   campos: AtendimentoField[];
+  /** Marca os grupos principais (médico, odontológico, enfermagem) para destaque visual no formulário. */
+  destaque?: boolean;
+  /** Soma automática: os `parcelas` são somados e preenchem o campo `total` a cada alteração (a pessoa pode sobrescrever depois). */
+  somaAutomatica?: { total: string; parcelas: string[] };
 };
 
 export const ATENDIMENTOS_GRUPOS: AtendimentoGrupo[] = [
   {
     titulo: 'Atendimento médico',
+    destaque: true,
+    somaAutomatica: {
+      total: 'atendimentos_medicos',
+      parcelas: ['criancas_medico', 'adolescentes_medico', 'adultos_medico'],
+    },
     campos: [
       { name: 'atendimentos_medicos', label: 'Atendimentos médicos', destaque: true },
       { name: 'criancas_medico', label: 'Crianças' },
@@ -22,6 +31,11 @@ export const ATENDIMENTOS_GRUPOS: AtendimentoGrupo[] = [
   },
   {
     titulo: 'Atendimento odontológico',
+    destaque: true,
+    somaAutomatica: {
+      total: 'atendimentos_odontologicos',
+      parcelas: ['criancas_odonto', 'adolescentes_odonto', 'adultos_odonto'],
+    },
     campos: [
       { name: 'atendimentos_odontologicos', label: 'Atendimentos odontológicos', destaque: true },
       { name: 'criancas_odonto', label: 'Crianças' },
@@ -33,6 +47,11 @@ export const ATENDIMENTOS_GRUPOS: AtendimentoGrupo[] = [
   },
   {
     titulo: 'Atendimento de enfermagem',
+    destaque: true,
+    somaAutomatica: {
+      total: 'atendimentos_enfermagem',
+      parcelas: ['criancas_enfermagem', 'adolescentes_enfermagem', 'adultos_enfermagem'],
+    },
     campos: [
       { name: 'atendimentos_enfermagem', label: 'Atendimentos de enfermagem', destaque: true },
       { name: 'criancas_enfermagem', label: 'Crianças' },
@@ -50,6 +69,7 @@ export const ATENDIMENTOS_GRUPOS: AtendimentoGrupo[] = [
       { name: 'atendimentos_dermatologia', label: 'Dermatologia' },
       { name: 'atendimentos_fonoaudiologia', label: 'Fonoaudiologia' },
       { name: 'atendimentos_nutricionista', label: 'Nutricionista' },
+      { name: 'orientacao_assistente_social', label: 'Orientação/Assistente social' },
     ],
   },
   {
@@ -126,7 +146,6 @@ export const ATENDIMENTOS_GRUPOS: AtendimentoGrupo[] = [
       { name: 'kit_homens', label: 'Kit para homens' },
       { name: 'lembrancas', label: 'Lembranças' },
       { name: 'orientacao_juridica', label: 'Orientação jurídica' },
-      { name: 'orientacao_assistente_social', label: 'Orientação/Assistente social' },
       { name: 'pintura_casas', label: 'Pintura de casas' },
       { name: 'pocos_perfurados', label: 'Poços perfurados' },
       { name: 'produtos_cabelo', label: 'Produtos de cabelo' },
