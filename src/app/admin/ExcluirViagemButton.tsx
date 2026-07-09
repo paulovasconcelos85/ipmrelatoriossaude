@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { excluirViagemIpm } from './actions';
+import { confirmarExclusaoDupla } from '@/lib/confirmar';
 
 export default function ExcluirViagemButton({ id }: { id: string }) {
   const [pending, startTransition] = useTransition();
@@ -13,7 +14,7 @@ export default function ExcluirViagemButton({ id }: { id: string }) {
         type="button"
         disabled={pending}
         onClick={() => {
-          if (!confirm('Excluir esta viagem e todos os dados relacionados? Essa ação não pode ser desfeita.')) return;
+          if (!confirmarExclusaoDupla('Excluir esta viagem e todos os dados relacionados?')) return;
           setErro(null);
           startTransition(async () => {
             try {
@@ -23,7 +24,7 @@ export default function ExcluirViagemButton({ id }: { id: string }) {
             }
           });
         }}
-        className="rounded-full border-2 border-red-300 px-4 py-2 text-sm font-bold text-red-700 disabled:opacity-60"
+        className="rounded-full border-2 border-red-300 px-4 py-2 text-sm font-bold text-red-700 transition-all duration-150 hover:border-red-400 hover:bg-red-50 active:scale-95 disabled:opacity-60 disabled:active:scale-100"
       >
         {pending ? 'Excluindo...' : 'Excluir'}
       </button>

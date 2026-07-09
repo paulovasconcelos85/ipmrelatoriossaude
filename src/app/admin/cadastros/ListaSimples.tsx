@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import { criarRegistroSimples, atualizarRegistroSimples, excluirRegistroSimples } from './actions';
+import { confirmarExclusaoDupla } from '@/lib/confirmar';
 import type { Lookup } from '@/lib/viagens-ipm';
 
 type Tabela = 'tipos_transporte' | 'barcos' | 'comunidades';
@@ -13,7 +14,7 @@ function BotaoSalvar({ texto }: { texto: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-full bg-blue-900 px-4 py-2 text-sm font-bold text-white shadow-sm disabled:opacity-60"
+      className="rounded-full bg-blue-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all duration-150 hover:bg-blue-800 active:scale-95 disabled:opacity-60 disabled:active:scale-100"
     >
       {pending ? 'Salvando...' : texto}
     </button>
@@ -41,7 +42,7 @@ function LinhaEditavel({ tabela, item }: { tabela: Tabela; item: Lookup }) {
           type="button"
           disabled={pendingExclusao}
           onClick={() => {
-            if (!confirm(`Excluir "${item.nome}"?`)) return;
+            if (!confirmarExclusaoDupla(`Excluir "${item.nome}"?`)) return;
             setErroExclusao(null);
             startTransition(async () => {
               try {
@@ -51,7 +52,7 @@ function LinhaEditavel({ tabela, item }: { tabela: Tabela; item: Lookup }) {
               }
             });
           }}
-          className="rounded-full border-2 border-red-300 px-4 py-1.5 text-sm font-bold text-red-700 disabled:opacity-60"
+          className="rounded-full border-2 border-red-300 px-4 py-1.5 text-sm font-bold text-red-700 transition-all duration-150 hover:border-red-400 hover:bg-red-50 active:scale-95 disabled:opacity-60 disabled:active:scale-100"
         >
           Excluir
         </button>

@@ -1,12 +1,34 @@
 import Link from 'next/link';
-import { listViagensIpm } from '@/lib/viagens-ipm';
-import { formatarPeriodo } from '@/lib/format';
-import ExcluirViagemButton from './ExcluirViagemButton';
+import { listViagensIpm, type ViagemIpm } from '@/lib/viagens-ipm';
+import ViagemCardAdmin from './ViagemCardAdmin';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Numeração "Ano-Nr" de cada viagem: usa `numero` quando já existe (importado do sistema
+ * antigo) ou calcula a posição da viagem dentro do ano (ordem cronológica) quando não existe.
+ */
+function calcularNumeracao(viagens: ViagemIpm[]): Map<string, string> {
+  const porAno = new Map<number, ViagemIpm[]>();
+  for (const v of viagens) {
+    const ano = v.ano ?? Number(v.data_saida.slice(0, 4));
+    if (!porAno.has(ano)) porAno.set(ano, []);
+    porAno.get(ano)!.push(v);
+  }
+
+  const numeracao = new Map<string, string>();
+  for (const [ano, lista] of porAno) {
+    const ordenadaPorData = [...lista].sort((a, b) => a.data_saida.localeCompare(b.data_saida));
+    ordenadaPorData.forEach((v, i) => {
+      numeracao.set(v.id, v.numero ?? `${ano}-${String(i + 1).padStart(2, '0')}`);
+    });
+  }
+  return numeracao;
+}
+
 export default async function AdminViagens() {
   const viagens = await listViagensIpm();
+  const numeracao = calcularNumeracao(viagens);
 
   return (
     <>
@@ -28,7 +50,7 @@ export default async function AdminViagens() {
               </Link>
               <Link
                 href="/viagens/nova"
-                className="rounded-full bg-white px-4 py-2 text-sm font-bold text-blue-900 shadow-sm"
+                className="rounded-full bg-white px-4 py-2 text-sm font-bold text-blue-900 shadow-sm transition-all duration-150 hover:bg-blue-50 active:scale-95"
               >
                 + Nova viagem
               </Link>
@@ -47,36 +69,7 @@ export default async function AdminViagens() {
           )}
 
           {viagens.map((v) => (
-            <div
-              key={v.id}
-              className="flex flex-col gap-3 rounded-2xl border-2 border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div>
-                <p className="text-base font-bold text-slate-900">
-                  {formatarPeriodo(v.data_saida, v.data_chegada)}
-                  {v.cancelada && (
-                    <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">
-                      Cancelada
-                    </span>
-                  )}
-                </p>
-                <p className="text-sm text-slate-600">
-                  {[v.area, v.local].filter(Boolean).join(' · ') || 'Sem área/local informado'}
-                </p>
-                <p className="text-sm text-slate-500">
-                  {v.coordenador ? `Coordenador: ${v.coordenador}` : 'Sem coordenador'}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <Link
-                  href={`/admin/${v.id}`}
-                  className="rounded-full border-2 border-blue-900 px-4 py-2 text-sm font-bold text-blue-900"
-                >
-                  Editar
-                </Link>
-                <ExcluirViagemButton id={v.id} />
-              </div>
-            </div>
+            <ViagemCardAdmin key={v.id} viagem={v} numero={numeracao.get(v.id)} />
           ))}
         </div>
       </main>

@@ -13,7 +13,7 @@ function BotaoSalvar() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-full bg-blue-900 px-6 py-3 text-base font-bold text-white shadow-sm disabled:opacity-60"
+      className="rounded-full bg-blue-900 px-6 py-3 text-base font-bold text-white shadow-sm transition-all duration-150 hover:bg-blue-800 active:scale-95 disabled:opacity-60 disabled:active:scale-100"
     >
       {pending ? 'Salvando...' : 'Salvar viagem'}
     </button>
