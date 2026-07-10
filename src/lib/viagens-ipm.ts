@@ -4,6 +4,7 @@ export type Lookup = { id: string; nome: string };
 export type Profissional = { id: string; nome: string; cargo: string | null };
 export type Parceiro = { id: string; nome: string; cidade: string | null; pais: string | null };
 export type Voluntario = { nome: string; funcao: string | null; observacao: string | null };
+export type Foto = { id: string; url: string; storagePath: string; legenda: string | null; posicao: number };
 
 export type ViagemIpm = {
   id: string;
@@ -26,6 +27,8 @@ export type ViagemIpm = {
   comunidades: string[];
   /** Voluntários que participaram da viagem (preenchido manualmente no admin). */
   voluntarios: Voluntario[];
+  /** Fotos anexadas à viagem, usadas no relatório em PDF. */
+  fotos: Foto[];
   /** Todas as colunas numéricas de public.atendimentos, exceto viagem_id. */
   atendimentos: Record<string, number | null>;
   atendimentosObservacoes: string | null;
@@ -64,7 +67,15 @@ type ViagemRow = {
     | { funcao: string | null; observacao: string | null; profissionais: { nome: string } | null }[]
     | null;
   atendimentos: (Record<string, number | null | string> & { viagem_id: string; observacoes: string | null }) | null;
+  viagem_fotos: { id: string; storage_path: string; legenda: string | null; posicao: number }[] | null;
 };
+
+export const BUCKET_FOTOS = 'viagem-fotos';
+
+export function urlPublicaFoto(storagePath: string): string {
+  if (!supabase) return '';
+  return supabase.storage.from(BUCKET_FOTOS).getPublicUrl(storagePath).data.publicUrl;
+}
 
 const SELECT_VIAGEM = `id, numero, ano, data_saida, data_chegada, dias_missao, tipo_missao, area, local, observacoes, cancelada,
        tipo_transporte_id,
@@ -78,7 +89,8 @@ const SELECT_VIAGEM = `id, numero, ano, data_saida, data_chegada, dias_missao, t
        viagem_parceiros(posicao, parceiro_id, parceiros(nome)),
        viagem_comunidades(posicao, comunidade_id, comunidades(nome)),
        viagem_voluntarios(funcao, observacao, profissionais(nome)),
-       atendimentos(*)`;
+       atendimentos(*),
+       viagem_fotos(id, storage_path, legenda, posicao)`;
 
 function mapRow(row: ViagemRow): ViagemIpm {
   const { observacoes: atendimentosObservacoes, ...resto } = row.atendimentos ?? { observacoes: null };
@@ -87,6 +99,7 @@ function mapRow(row: ViagemRow): ViagemIpm {
 
   const parceirosOrdenados = (row.viagem_parceiros ?? []).slice().sort((a, b) => a.posicao - b.posicao);
   const comunidadesOrdenadas = (row.viagem_comunidades ?? []).slice().sort((a, b) => a.posicao - b.posicao);
+  const fotosOrdenadas = (row.viagem_fotos ?? []).slice().sort((a, b) => a.posicao - b.posicao);
 
   return {
     id: row.id,
@@ -113,6 +126,13 @@ function mapRow(row: ViagemRow): ViagemIpm {
         funcao: v.funcao,
         observacao: v.observacao,
       })),
+    fotos: fotosOrdenadas.map((f) => ({
+      id: f.id,
+      url: urlPublicaFoto(f.storage_path),
+      storagePath: f.storage_path,
+      legenda: f.legenda,
+      posicao: f.posicao,
+    })),
     atendimentos: metricas as Record<string, number | null>,
     atendimentosObservacoes: (atendimentosObservacoes as string | null) ?? null,
     tipo_transporte_id: row.tipo_transporte_id,

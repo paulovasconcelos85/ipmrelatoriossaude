@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { listViagensIpm, type ViagemIpm } from '@/lib/viagens-ipm';
 import ViagemCardAdmin from './ViagemCardAdmin';
+import { logoutAdmin } from './login/actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +55,14 @@ export default async function AdminViagens() {
               >
                 + Nova viagem
               </Link>
+              <form action={logoutAdmin}>
+                <button
+                  type="submit"
+                  className="text-sm font-semibold text-blue-100 underline underline-offset-2"
+                >
+                  Sair
+                </button>
+              </form>
             </div>
           </div>
           <p className="text-sm text-blue-100">{viagens.length} viagens registradas</p>

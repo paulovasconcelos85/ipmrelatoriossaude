@@ -131,6 +131,26 @@ export default function DetalhesViagem({ viagem }: { viagem: ViagemIpm }) {
           {viagem.atendimentosObservacoes}
         </p>
       )}
+
+      {viagem.fotos.length > 0 && (
+        <div className="mt-4">
+          <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Fotos</h3>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {viagem.fotos.map((foto) => (
+              <li key={foto.id} className="flex flex-col gap-1">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={foto.url}
+                  alt={foto.legenda ?? 'Foto da viagem'}
+                  loading="lazy"
+                  className="aspect-square w-full rounded-lg object-cover"
+                />
+                {foto.legenda && <span className="break-words text-xs text-slate-500">{foto.legenda}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

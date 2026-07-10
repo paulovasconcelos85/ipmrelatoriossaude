@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import EditarViagemForm from './EditarViagemForm';
+import FotosViagem from './FotosViagem';
 import {
   getViagemIpmPorId,
   listTiposTransporte,
@@ -50,7 +51,7 @@ export default async function EditarViagem({ params }: { params: Promise<{ id: s
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 pt-6">
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 pb-16 pt-6">
         <EditarViagemForm
           viagem={viagem}
           tiposTransporte={tiposTransporte}
@@ -63,6 +64,7 @@ export default async function EditarViagem({ params }: { params: Promise<{ id: s
           locais={locais}
           funcoesVoluntario={funcoesVoluntario}
         />
+        <FotosViagem viagemId={viagem.id} fotos={viagem.fotos} />
       </main>
     </>
   );

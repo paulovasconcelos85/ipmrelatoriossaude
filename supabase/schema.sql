@@ -105,6 +105,20 @@ create table if not exists public.viagem_voluntarios (
 alter table public.viagem_voluntarios add column if not exists funcao text;
 alter table public.viagem_voluntarios add column if not exists observacao text;
 
+-- Fotos anexadas à viagem (preenchido no admin; usadas no relatório em PDF).
+-- O arquivo em si fica no bucket de Storage "viagem-fotos" — esta tabela guarda
+-- apenas o caminho do objeto, a legenda e a ordem de exibição.
+create table if not exists public.viagem_fotos (
+  id uuid primary key default gen_random_uuid(),
+  viagem_id uuid not null references public.viagens (id) on delete cascade,
+  storage_path text not null,
+  legenda text,
+  posicao smallint not null default 1,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists viagem_fotos_viagem_id_idx on public.viagem_fotos (viagem_id);
+
 -- ---------------------------------------------------------------------------
 -- Atendimentos e atividades por viagem (métricas do sistema IPM)
 -- ---------------------------------------------------------------------------
@@ -269,6 +283,7 @@ alter table public.viagem_parceiros enable row level security;
 alter table public.viagem_comunidades enable row level security;
 alter table public.viagem_voluntarios enable row level security;
 alter table public.atendimentos enable row level security;
+alter table public.viagem_fotos enable row level security;
 
 drop policy if exists "Permitir leitura publica de tipos_transporte" on public.tipos_transporte;
 create policy "Permitir leitura publica de tipos_transporte" on public.tipos_transporte for select using (true);
@@ -299,6 +314,9 @@ create policy "Permitir leitura publica de viagem_voluntarios" on public.viagem_
 
 drop policy if exists "Permitir leitura publica de atendimentos" on public.atendimentos;
 create policy "Permitir leitura publica de atendimentos" on public.atendimentos for select using (true);
+
+drop policy if exists "Permitir leitura publica de viagem_fotos" on public.viagem_fotos;
+create policy "Permitir leitura publica de viagem_fotos" on public.viagem_fotos for select using (true);
 
 -- ---------------------------------------------------------------------------
 -- RLS: escrita pública (temporário, enquanto não há autenticação de admin)
@@ -334,3 +352,26 @@ create policy "Permitir escrita publica de viagem_voluntarios" on public.viagem_
 
 drop policy if exists "Permitir escrita publica de atendimentos" on public.atendimentos;
 create policy "Permitir escrita publica de atendimentos" on public.atendimentos for all using (true) with check (true);
+
+drop policy if exists "Permitir escrita publica de viagem_fotos" on public.viagem_fotos;
+create policy "Permitir escrita publica de viagem_fotos" on public.viagem_fotos for all using (true) with check (true);
+
+-- ---------------------------------------------------------------------------
+-- Storage: bucket público para as fotos das viagens
+-- ---------------------------------------------------------------------------
+
+insert into storage.buckets (id, name, public)
+values ('viagem-fotos', 'viagem-fotos', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Permitir leitura publica do bucket viagem-fotos" on storage.objects;
+create policy "Permitir leitura publica do bucket viagem-fotos" on storage.objects
+  for select using (bucket_id = 'viagem-fotos');
+
+drop policy if exists "Permitir upload publico no bucket viagem-fotos" on storage.objects;
+create policy "Permitir upload publico no bucket viagem-fotos" on storage.objects
+  for insert with check (bucket_id = 'viagem-fotos');
+
+drop policy if exists "Permitir exclusao publica no bucket viagem-fotos" on storage.objects;
+create policy "Permitir exclusao publica no bucket viagem-fotos" on storage.objects
+  for delete using (bucket_id = 'viagem-fotos');
