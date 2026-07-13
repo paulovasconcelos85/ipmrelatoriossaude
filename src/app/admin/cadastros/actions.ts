@@ -51,13 +51,14 @@ export async function atualizarRegistroSimples(
   return undefined;
 }
 
-export async function excluirRegistroSimples(tabela: TabelaSimples, id: string): Promise<void> {
-  if (!supabaseConfigured || !supabase) return;
+export async function excluirRegistroSimples(tabela: TabelaSimples, id: string): Promise<EstadoCadastro> {
+  if (!supabaseConfigured || !supabase) return { erro: 'Supabase não está configurado neste ambiente.' };
 
   const { error } = await supabase.from(tabela).delete().eq('id', id);
-  if (error) throw new Error(mensagemErro(error));
+  if (error) return { erro: mensagemErro(error) };
 
   revalidatePath('/admin/cadastros');
+  return undefined;
 }
 
 // --- Parceiros (nome, cidade, país) ---
@@ -93,13 +94,14 @@ export async function atualizarParceiro(_estado: EstadoCadastro, formData: FormD
   return undefined;
 }
 
-export async function excluirParceiro(id: string): Promise<void> {
-  if (!supabaseConfigured || !supabase) return;
+export async function excluirParceiro(id: string): Promise<EstadoCadastro> {
+  if (!supabaseConfigured || !supabase) return { erro: 'Supabase não está configurado neste ambiente.' };
 
   const { error } = await supabase.from('parceiros').delete().eq('id', id);
-  if (error) throw new Error(mensagemErro(error));
+  if (error) return { erro: mensagemErro(error) };
 
   revalidatePath('/admin/cadastros');
+  return undefined;
 }
 
 // --- Profissionais (nome, cargo) ---
@@ -133,11 +135,12 @@ export async function atualizarProfissional(_estado: EstadoCadastro, formData: F
   return undefined;
 }
 
-export async function excluirProfissional(id: string): Promise<void> {
-  if (!supabaseConfigured || !supabase) return;
+export async function excluirProfissional(id: string): Promise<EstadoCadastro> {
+  if (!supabaseConfigured || !supabase) return { erro: 'Supabase não está configurado neste ambiente.' };
 
   const { error } = await supabase.from('profissionais').delete().eq('id', id);
-  if (error) throw new Error(mensagemErro(error));
+  if (error) return { erro: mensagemErro(error) };
 
   revalidatePath('/admin/cadastros');
+  return undefined;
 }

@@ -116,11 +116,8 @@ function LegendaFoto({ viagemId, foto }: { viagemId: string; foto: Foto }) {
   function salvar() {
     setErro(null);
     startTransition(async () => {
-      try {
-        await atualizarLegendaFoto(viagemId, foto.id, legenda);
-      } catch (err) {
-        setErro(err instanceof Error ? err.message : 'Erro ao salvar a legenda.');
-      }
+      const resultado = await atualizarLegendaFoto(viagemId, foto.id, legenda);
+      if (resultado?.erro) setErro(resultado.erro);
     });
   }
 
@@ -168,11 +165,8 @@ function BotaoRemoverFoto({ viagemId, foto }: { viagemId: string; foto: Foto }) 
           if (!confirmarExclusaoDupla('Excluir esta foto?')) return;
           setErro(null);
           startTransition(async () => {
-            try {
-              await removerFotoViagem(viagemId, foto.id, foto.storagePath);
-            } catch (err) {
-              setErro(err instanceof Error ? err.message : 'Erro ao excluir a foto.');
-            }
+            const resultado = await removerFotoViagem(viagemId, foto.id, foto.storagePath);
+            if (resultado?.erro) setErro(resultado.erro);
           });
         }}
         className="rounded-full border-2 border-red-300 bg-white px-3 py-1 text-xs font-bold text-red-700 transition-all duration-150 hover:border-red-400 hover:bg-red-50 active:scale-95 disabled:opacity-60"

@@ -68,28 +68,38 @@ export async function adicionarFotoViagem(
   return {};
 }
 
-export async function atualizarLegendaFoto(viagemId: string, fotoId: string, legenda: string): Promise<void> {
-  if (!supabaseConfigured || !supabase) return;
+export async function atualizarLegendaFoto(
+  viagemId: string,
+  fotoId: string,
+  legenda: string,
+): Promise<{ erro?: string } | undefined> {
+  if (!supabaseConfigured || !supabase) return { erro: 'Supabase não está configurado neste ambiente.' };
 
   const legendaTexto = legenda.trim() !== '' ? legenda.trim() : null;
 
   const { error } = await supabase.from('viagem_fotos').update({ legenda: legendaTexto }).eq('id', fotoId);
   if (error) {
-    throw new Error(`Não foi possível salvar a legenda: ${error.message}`);
+    return { erro: `Não foi possível salvar a legenda: ${error.message}` };
   }
 
   revalidatePath(`/admin/${viagemId}`);
+  return undefined;
 }
 
-export async function removerFotoViagem(viagemId: string, fotoId: string, storagePath: string): Promise<void> {
-  if (!supabaseConfigured || !supabase) return;
+export async function removerFotoViagem(
+  viagemId: string,
+  fotoId: string,
+  storagePath: string,
+): Promise<{ erro?: string } | undefined> {
+  if (!supabaseConfigured || !supabase) return { erro: 'Supabase não está configurado neste ambiente.' };
 
   const { error: erroExclusaoLinha } = await supabase.from('viagem_fotos').delete().eq('id', fotoId);
   if (erroExclusaoLinha) {
-    throw new Error(`Não foi possível excluir a foto: ${erroExclusaoLinha.message}`);
+    return { erro: `Não foi possível excluir a foto: ${erroExclusaoLinha.message}` };
   }
 
   await supabase.storage.from(BUCKET_FOTOS).remove([storagePath]);
 
   revalidatePath(`/admin/${viagemId}`);
+  return undefined;
 }

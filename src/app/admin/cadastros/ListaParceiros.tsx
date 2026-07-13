@@ -57,11 +57,8 @@ function LinhaEditavel({ item }: { item: Parceiro }) {
             if (!confirmarExclusaoDupla(`Excluir "${item.nome}"?`)) return;
             setErroExclusao(null);
             startTransition(async () => {
-              try {
-                await excluirParceiro(item.id);
-              } catch (err) {
-                setErroExclusao(err instanceof Error ? err.message : 'Erro ao excluir.');
-              }
+              const resultado = await excluirParceiro(item.id);
+              if (resultado?.erro) setErroExclusao(resultado.erro);
             });
           }}
           className="rounded-full border-2 border-red-300 px-4 py-1.5 text-sm font-bold text-red-700 transition-all duration-150 hover:border-red-400 hover:bg-red-50 active:scale-95 disabled:opacity-60 disabled:active:scale-100"
