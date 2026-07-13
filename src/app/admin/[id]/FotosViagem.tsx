@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useRef, useState, useTransition } from 'react';
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import { adicionarFotoViagem, atualizarLegendaFoto, removerFotoViagem } from './fotos-actions';
 import { confirmarExclusaoDupla } from '@/lib/confirmar';
@@ -23,6 +23,19 @@ function CampoFoto({ inputRef }: { inputRef: React.RefObject<HTMLInputElement | 
     });
     setNomeArquivo(file?.name ?? null);
   }
+
+  useEffect(() => {
+    function aoColar(e: ClipboardEvent) {
+      const item = Array.from(e.clipboardData?.items ?? []).find((i) => i.type.startsWith('image/'));
+      const file = item?.getAsFile();
+      if (file) {
+        e.preventDefault();
+        definirArquivo(file);
+      }
+    }
+    document.addEventListener('paste', aoColar);
+    return () => document.removeEventListener('paste', aoColar);
+  }, []);
 
   return (
     <div className="flex flex-1 flex-col gap-1 text-sm font-semibold text-slate-600">
@@ -48,14 +61,6 @@ function CampoFoto({ inputRef }: { inputRef: React.RefObject<HTMLInputElement | 
           const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith('image/'));
           if (file) definirArquivo(file);
         }}
-        onPaste={(e) => {
-          const item = Array.from(e.clipboardData.items).find((i) => i.type.startsWith('image/'));
-          const file = item?.getAsFile();
-          if (file) {
-            e.preventDefault();
-            definirArquivo(file);
-          }
-        }}
         className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-3 py-4 text-center text-xs font-normal transition-colors ${
           arrastando ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-300 text-slate-500'
         }`}
@@ -77,7 +82,7 @@ function CampoFoto({ inputRef }: { inputRef: React.RefObject<HTMLInputElement | 
             </button>
           </div>
         ) : (
-          <span>Arraste uma imagem aqui, cole com Ctrl+V ou clique para escolher</span>
+          <span>Arraste uma imagem aqui, clique para escolher ou cole com Ctrl+V em qualquer lugar da página</span>
         )}
         <input
           ref={inputRef}
