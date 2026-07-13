@@ -1,45 +1,77 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
+import { useActionState, useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import { adicionarFotoViagem, atualizarLegendaFoto, removerFotoViagem } from './fotos-actions';
 import { confirmarExclusaoDupla } from '@/lib/confirmar';
 import type { Foto } from '@/lib/viagens-ipm';
 
+type ArquivoPreview = { arquivo: File; url: string };
+
 function CampoFoto({ inputRef }: { inputRef: React.RefObject<HTMLInputElement | null> }) {
   const [arrastando, setArrastando] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [nomeArquivo, setNomeArquivo] = useState<string | null>(null);
+  const [arquivos, setArquivos] = useState<ArquivoPreview[]>([]);
+  const arquivosRef = useRef<ArquivoPreview[]>([]);
 
-  function definirArquivo(file: File | null) {
-    if (!inputRef.current) return;
-    const dataTransfer = new DataTransfer();
-    if (file) dataTransfer.items.add(file);
-    inputRef.current.files = dataTransfer.files;
+  useEffect(() => {
+    arquivosRef.current = arquivos;
+  });
 
-    setPreviewUrl((atual) => {
-      if (atual) URL.revokeObjectURL(atual);
-      return file ? URL.createObjectURL(file) : null;
-    });
-    setNomeArquivo(file?.name ?? null);
+  const sincronizarArquivos = useCallback(
+    (novos: File[]) => {
+      if (!inputRef.current) return;
+      const dataTransfer = new DataTransfer();
+      novos.forEach((f) => dataTransfer.items.add(f));
+      inputRef.current.files = dataTransfer.files;
+
+      const atuais = arquivosRef.current;
+      for (const { arquivo, url } of atuais) {
+        if (!novos.includes(arquivo)) URL.revokeObjectURL(url);
+      }
+      setArquivos(
+        novos.map(
+          (arquivo) => atuais.find((a) => a.arquivo === arquivo) ?? { arquivo, url: URL.createObjectURL(arquivo) },
+        ),
+      );
+    },
+    [inputRef],
+  );
+
+  const adicionarArquivos = useCallback(
+    (novos: File[]) => {
+      sincronizarArquivos([...arquivosRef.current.map((a) => a.arquivo), ...novos]);
+    },
+    [sincronizarArquivos],
+  );
+
+  function removerArquivo(index: number) {
+    sincronizarArquivos(arquivosRef.current.filter((_, i) => i !== index).map((a) => a.arquivo));
   }
 
   useEffect(() => {
+    return () => {
+      arquivosRef.current.forEach(({ url }) => URL.revokeObjectURL(url));
+    };
+  }, []);
+
+  useEffect(() => {
     function aoColar(e: ClipboardEvent) {
-      const item = Array.from(e.clipboardData?.items ?? []).find((i) => i.type.startsWith('image/'));
-      const file = item?.getAsFile();
-      if (file) {
+      const imagens = Array.from(e.clipboardData?.items ?? [])
+        .filter((i) => i.type.startsWith('image/'))
+        .map((i) => i.getAsFile())
+        .filter((f): f is File => f !== null);
+      if (imagens.length > 0) {
         e.preventDefault();
-        definirArquivo(file);
+        adicionarArquivos(imagens);
       }
     }
     document.addEventListener('paste', aoColar);
     return () => document.removeEventListener('paste', aoColar);
-  }, []);
+  }, [adicionarArquivos]);
 
   return (
     <div className="flex flex-1 flex-col gap-1 text-sm font-semibold text-slate-600">
-      Foto
+      Fotos
       <div
         role="button"
         tabIndex={0}
@@ -58,40 +90,49 @@ function CampoFoto({ inputRef }: { inputRef: React.RefObject<HTMLInputElement | 
         onDrop={(e) => {
           e.preventDefault();
           setArrastando(false);
-          const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith('image/'));
-          if (file) definirArquivo(file);
+          const imagens = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+          if (imagens.length > 0) adicionarArquivos(imagens);
         }}
         className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-3 py-4 text-center text-xs font-normal transition-colors ${
           arrastando ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-300 text-slate-500'
         }`}
       >
-        {previewUrl ? (
-          <div className="flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={previewUrl} alt="Pré-visualização" className="h-12 w-12 rounded object-cover" />
-            <span className="max-w-[10rem] truncate">{nomeArquivo}</span>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                definirArquivo(null);
-              }}
-              className="font-bold text-red-600 underline"
-            >
-              remover
-            </button>
+        {arquivos.length > 0 ? (
+          <div className="flex w-full flex-wrap items-center gap-2">
+            {arquivos.map(({ arquivo, url }, i) => (
+              <div key={i} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt={arquivo.name} className="h-14 w-14 rounded object-cover" />
+                <button
+                  type="button"
+                  aria-label={`Remover ${arquivo.name}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removerArquivo(i);
+                  }}
+                  className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            <span className="text-slate-500">
+              {arquivos.length} foto{arquivos.length > 1 ? 's' : ''} selecionada{arquivos.length > 1 ? 's' : ''} —
+              clique para adicionar mais
+            </span>
           </div>
         ) : (
-          <span>Arraste uma imagem aqui, clique para escolher ou cole com Ctrl+V em qualquer lugar da página</span>
+          <span>Arraste uma ou mais imagens aqui, clique para escolher ou cole com Ctrl+V em qualquer lugar da página</span>
         )}
         <input
           ref={inputRef}
           type="file"
           name="foto"
+          multiple
           accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
           required
-          aria-label="Foto"
-          onChange={(e) => definirArquivo(e.target.files?.[0] ?? null)}
+          aria-label="Fotos"
+          onChange={(e) => adicionarArquivos(Array.from(e.target.files ?? []))}
           className="sr-only"
         />
       </div>
@@ -107,7 +148,7 @@ function BotaoEnviar() {
       disabled={pending}
       className="rounded-full bg-blue-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all duration-150 hover:bg-blue-800 active:scale-95 disabled:opacity-60"
     >
-      {pending ? 'Enviando...' : 'Adicionar foto'}
+      {pending ? 'Enviando...' : 'Adicionar fotos'}
     </button>
   );
 }
@@ -231,7 +272,7 @@ export default function FotosViagem({ viagemId, fotos }: { viagemId: string; fot
         <input type="hidden" name="viagem_id" value={viagemId} />
         <CampoFoto key={campoFotoKey} inputRef={fotoInputRef} />
         <label className="flex flex-1 flex-col gap-1 text-sm font-semibold text-slate-600">
-          Legenda (opcional)
+          Legenda (opcional, aplicada a todas as fotos deste envio)
           <input
             type="text"
             name="legenda"

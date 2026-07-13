@@ -22,15 +22,17 @@ export async function adicionarFotoViagem(
     return { erro: 'Viagem inválida.' };
   }
 
-  const arquivo = formData.get('foto');
-  if (!(arquivo instanceof File) || arquivo.size === 0) {
-    return { erro: 'Escolha uma foto para enviar.' };
+  const arquivos = formData.getAll('foto').filter((v): v is File => v instanceof File && v.size > 0);
+  if (arquivos.length === 0) {
+    return { erro: 'Escolha ao menos uma foto para enviar.' };
   }
-  if (!TIPOS_PERMITIDOS.includes(arquivo.type)) {
-    return { erro: 'Formato não suportado. Envie uma foto em JPEG, PNG, WEBP ou HEIC.' };
-  }
-  if (arquivo.size > TAMANHO_MAXIMO) {
-    return { erro: 'Foto muito grande. O tamanho máximo é 8MB.' };
+  for (const arquivo of arquivos) {
+    if (!TIPOS_PERMITIDOS.includes(arquivo.type)) {
+      return { erro: `Formato não suportado em "${arquivo.name}". Envie fotos em JPEG, PNG, WEBP ou HEIC.` };
+    }
+    if (arquivo.size > TAMANHO_MAXIMO) {
+      return { erro: `"${arquivo.name}" é muito grande. O tamanho máximo é 8MB por foto.` };
+    }
   }
 
   const legenda = formData.get('legenda');
@@ -42,29 +44,42 @@ export async function adicionarFotoViagem(
     .eq('viagem_id', viagemId);
   const proximaPosicao = (count ?? 0) + 1;
 
-  const extensao = arquivo.name.includes('.') ? arquivo.name.split('.').pop() : arquivo.type.split('/').pop();
-  const caminho = `${viagemId}/${crypto.randomUUID()}.${extensao}`;
+  // Envios de cada arquivo são independentes entre si — rodam em paralelo.
+  const envios = await Promise.all(
+    arquivos.map(async (arquivo, i) => {
+      const extensao = arquivo.name.includes('.') ? arquivo.name.split('.').pop() : arquivo.type.split('/').pop();
+      const caminho = `${viagemId}/${crypto.randomUUID()}.${extensao}`;
+      const { error: erro } = await supabase!.storage.from(BUCKET_FOTOS).upload(caminho, arquivo, {
+        contentType: arquivo.type,
+        upsert: false,
+      });
+      return { caminho, posicao: proximaPosicao + i, erro };
+    }),
+  );
 
-  const { error: erroUpload } = await supabase.storage.from(BUCKET_FOTOS).upload(caminho, arquivo, {
-    contentType: arquivo.type,
-    upsert: false,
-  });
-  if (erroUpload) {
-    return { erro: `Não foi possível enviar a foto: ${erroUpload.message}` };
-  }
+  const enviadas = envios.filter((e) => !e.erro);
+  const falhas = envios.filter((e) => e.erro);
 
-  const { error: erroInsercao } = await supabase.from('viagem_fotos').insert({
-    viagem_id: viagemId,
-    storage_path: caminho,
-    legenda: legendaTexto,
-    posicao: proximaPosicao,
-  });
-  if (erroInsercao) {
-    await supabase.storage.from(BUCKET_FOTOS).remove([caminho]);
-    return { erro: `Não foi possível salvar a foto: ${erroInsercao.message}` };
+  if (enviadas.length > 0) {
+    const { error: erroInsercao } = await supabase.from('viagem_fotos').insert(
+      enviadas.map((e) => ({
+        viagem_id: viagemId,
+        storage_path: e.caminho,
+        legenda: legendaTexto,
+        posicao: e.posicao,
+      })),
+    );
+    if (erroInsercao) {
+      await supabase.storage.from(BUCKET_FOTOS).remove(enviadas.map((e) => e.caminho));
+      return { erro: `Não foi possível salvar as fotos: ${erroInsercao.message}` };
+    }
   }
 
   revalidatePath(`/admin/${viagemId}`);
+
+  if (falhas.length > 0) {
+    return { erro: `${falhas.length} de ${arquivos.length} foto(s) não puderam ser enviadas. Tente novamente com elas.` };
+  }
   return {};
 }
 
