@@ -25,6 +25,38 @@ function ehViagemAmazon(viagem: ViagemIpm): boolean {
   return viagem.parceiros.some((p) => p.toLowerCase().includes('amazon'));
 }
 
+function juntarComE(itens: string[]): string {
+  if (itens.length <= 1) return itens[0] ?? '';
+  return `${itens.slice(0, -1).join(', ')} e ${itens[itens.length - 1]}`;
+}
+
+/** Parágrafo de abertura do relatório, nos moldes dos relatórios em Word usados até hoje. */
+function montarParagrafoAbertura(viagem: ViagemIpm): string {
+  let texto =
+    'Relatório dos atendimentos da equipe de saúde da Igreja Presbiteriana de Manaus (IP Manaus) na viagem ' +
+    'missionária realizada através da Secretaria de Missões Regionais e Transculturais, sob a gestão de Juciane ' +
+    'Seleguim, Gestora da Secretaria';
+
+  if (viagem.coordenador) {
+    texto += `, e coordenação de ${viagem.coordenador}`;
+  }
+
+  const clausulas: string[] = [];
+  if (viagem.parceiros.length > 0) {
+    clausulas.push(`em parceria com ${juntarComE(viagem.parceiros)}`);
+  }
+  if (viagem.lider_saude) {
+    clausulas.push(`liderança de ${viagem.lider_saude}`);
+  }
+  if (viagem.barco) {
+    clausulas.push(`no barco "${viagem.barco}"`);
+  }
+  const periodo = formatarPeriodo(viagem.data_saida, viagem.data_chegada);
+  clausulas.push(`nos dias ${periodo}${viagem.ano ? ` de ${viagem.ano}` : ''}`);
+
+  return `${texto}, ${clausulas.join(', ')}.`;
+}
+
 async function carregarLogoComProporcao(url: string): Promise<{ dataUrl: string; largura: number } | null> {
   try {
     const dataUrl = await carregarImagemComoDataUrl(url);
@@ -103,6 +135,13 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
   doc.setTextColor(...COR_SLATE_500);
   doc.text(subtitulo, MARGEM, y);
   y += 10;
+
+  const paragrafoAbertura = doc.splitTextToSize(montarParagrafoAbertura(viagem), LARGURA_UTIL);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...COR_SLATE_900);
+  doc.text(paragrafoAbertura, MARGEM, y);
+  y += paragrafoAbertura.length * 5 + 6;
 
   // Dados da viagem (pares label/valor, mesmos campos de DetalhesViagem.tsx).
   const dados: [string, string][] = [];
