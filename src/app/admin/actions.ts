@@ -1,18 +1,18 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { supabase, supabaseConfigured } from '@/lib/supabase/client';
 import { ATENDIMENTOS_CAMPOS } from '@/lib/atendimentos-fields';
 import {
   textoOuNulo,
   inteiroOuNulo,
   obterOuCriarPorNome,
+  resolverNomesParaIds,
   calcularDiasMissao,
   resolverVoluntarios,
 } from '@/lib/form-helpers';
 
-export type EstadoEditarViagem = { erro?: string } | undefined;
+export type EstadoEditarViagem = { erro?: string; sucesso?: boolean; salvoEm?: number } | undefined;
 
 export async function atualizarViagemIpm(
   _estadoAnterior: EstadoEditarViagem,
@@ -43,19 +43,12 @@ export async function atualizarViagemIpm(
     const ano = parseInt(dataSaida.slice(0, 4), 10);
 
     const tipoTransporte = textoOuNulo(formData.get('tipo_transporte'));
-    const tipoTransporteId = tipoTransporte ? await obterOuCriarPorNome('tipos_transporte', tipoTransporte) : null;
-
     const barco = textoOuNulo(formData.get('barco'));
-    const barcoId = barco ? await obterOuCriarPorNome('barcos', barco) : null;
-
     // Coordenador/líder é um papel da pessoa nesta viagem, não a profissão dela — por isso
     // não atribuímos nenhum cargo automático ao criar o profissional por aqui. O cargo real
     // (dentista, secretária de missões...) é preenchido depois na tela de Cadastros.
     const coordenador = textoOuNulo(formData.get('coordenador'));
-    const coordenadorId = coordenador ? await obterOuCriarPorNome('profissionais', coordenador) : null;
-
     const lider = textoOuNulo(formData.get('lider'));
-    const liderId = lider ? await obterOuCriarPorNome('profissionais', lider) : null;
 
     const nomesParceiros = formData
       .getAll('parceiros')
@@ -63,25 +56,34 @@ export async function atualizarViagemIpm(
       .map((v) => v.trim())
       .filter(Boolean);
 
-    const todosParceirosIds: string[] = [];
-    for (const nome of nomesParceiros) {
-      const id = await obterOuCriarPorNome('parceiros', nome);
-      if (id) todosParceirosIds.push(id);
-    }
-
     const nomesComunidades = formData
       .getAll('comunidades')
       .filter((v): v is string => typeof v === 'string')
       .map((v) => v.trim())
       .filter(Boolean);
 
-    const todasComunidadesIds: string[] = [];
-    for (const nome of nomesComunidades) {
-      const id = await obterOuCriarPorNome('comunidades', nome);
-      if (id) todasComunidadesIds.push(id);
+    // Consultas independentes — resolvidas em paralelo para não somar uma volta de rede a cada uma.
+    async function resolverCoordenadorELider(): Promise<[string | null, string | null]> {
+      // Coordenador e líder podem ser a mesma pessoa; resolve nomes únicos primeiro para não
+      // disparar duas buscas/criações concorrentes do mesmo profissional (o que geraria duplicata).
+      const idsPorNome = new Map<string, string | null>();
+      await Promise.all(
+        Array.from(new Set([coordenador, lider].filter((v): v is string => !!v))).map(async (nome) => {
+          idsPorNome.set(nome, await obterOuCriarPorNome('profissionais', nome));
+        }),
+      );
+      return [coordenador ? (idsPorNome.get(coordenador) ?? null) : null, lider ? (idsPorNome.get(lider) ?? null) : null];
     }
 
-    const voluntarios = await resolverVoluntarios(formData);
+    const [tipoTransporteId, barcoId, [coordenadorId, liderId], todosParceirosIds, todasComunidadesIds, voluntarios] =
+      await Promise.all([
+        tipoTransporte ? obterOuCriarPorNome('tipos_transporte', tipoTransporte) : Promise.resolve(null),
+        barco ? obterOuCriarPorNome('barcos', barco) : Promise.resolve(null),
+        resolverCoordenadorELider(),
+        resolverNomesParaIds('parceiros', nomesParceiros),
+        resolverNomesParaIds('comunidades', nomesComunidades),
+        resolverVoluntarios(formData),
+      ]);
 
     const { error: erroViagem } = await supabase
       .from('viagens')
@@ -106,80 +108,62 @@ export async function atualizarViagemIpm(
       return { erro: `Não foi possível salvar a viagem: ${erroViagem.message}` };
     }
 
-    const { error: erroRemoverParceiros } = await supabase
-      .from('viagem_parceiros')
-      .delete()
-      .eq('viagem_id', viagemId);
-    if (erroRemoverParceiros) {
-      return { erro: `Viagem salva, mas houve erro ao atualizar parceiros: ${erroRemoverParceiros.message}` };
+    // As quatro sincronizações abaixo tocam tabelas diferentes e não dependem umas das outras —
+    // rodam em paralelo para não somar uma volta de rede a cada uma.
+    async function sincronizarViagemParceiros(): Promise<string | null> {
+      const { error: erroRemover } = await supabase!.from('viagem_parceiros').delete().eq('viagem_id', viagemId);
+      if (erroRemover) return `Viagem salva, mas houve erro ao atualizar parceiros: ${erroRemover.message}`;
+      if (todosParceirosIds.length === 0) return null;
+      const linhas = todosParceirosIds.map((parceiroId, i) => ({ viagem_id: viagemId, parceiro_id: parceiroId, posicao: i + 1 }));
+      const { error } = await supabase!.from('viagem_parceiros').insert(linhas);
+      return error ? `Viagem salva, mas houve erro ao vincular parceiros: ${error.message}` : null;
     }
 
-    if (todosParceirosIds.length > 0) {
-      const linhas = todosParceirosIds.map((parceiroId, i) => ({
-        viagem_id: viagemId,
-        parceiro_id: parceiroId,
-        posicao: i + 1,
-      }));
-      const { error: erroParceiros } = await supabase.from('viagem_parceiros').insert(linhas);
-      if (erroParceiros) {
-        return { erro: `Viagem salva, mas houve erro ao vincular parceiros: ${erroParceiros.message}` };
-      }
+    async function sincronizarViagemComunidades(): Promise<string | null> {
+      const { error: erroRemover } = await supabase!.from('viagem_comunidades').delete().eq('viagem_id', viagemId);
+      if (erroRemover) return `Viagem salva, mas houve erro ao atualizar comunidades: ${erroRemover.message}`;
+      if (todasComunidadesIds.length === 0) return null;
+      const linhas = todasComunidadesIds.map((comunidadeId, i) => ({ viagem_id: viagemId, comunidade_id: comunidadeId, posicao: i + 1 }));
+      const { error } = await supabase!.from('viagem_comunidades').insert(linhas);
+      return error ? `Viagem salva, mas houve erro ao vincular comunidades: ${error.message}` : null;
     }
 
-    const { error: erroRemoverComunidades } = await supabase
-      .from('viagem_comunidades')
-      .delete()
-      .eq('viagem_id', viagemId);
-    if (erroRemoverComunidades) {
-      return { erro: `Viagem salva, mas houve erro ao atualizar comunidades: ${erroRemoverComunidades.message}` };
-    }
-
-    if (todasComunidadesIds.length > 0) {
-      const linhas = todasComunidadesIds.map((comunidadeId, i) => ({
-        viagem_id: viagemId,
-        comunidade_id: comunidadeId,
-        posicao: i + 1,
-      }));
-      const { error: erroComunidades } = await supabase.from('viagem_comunidades').insert(linhas);
-      if (erroComunidades) {
-        return { erro: `Viagem salva, mas houve erro ao vincular comunidades: ${erroComunidades.message}` };
-      }
-    }
-
-    const { error: erroRemoverVoluntarios } = await supabase
-      .from('viagem_voluntarios')
-      .delete()
-      .eq('viagem_id', viagemId);
-    if (erroRemoverVoluntarios) {
-      return { erro: `Viagem salva, mas houve erro ao atualizar a equipe: ${erroRemoverVoluntarios.message}` };
-    }
-
-    if (voluntarios.length > 0) {
+    async function sincronizarViagemVoluntarios(): Promise<string | null> {
+      const { error: erroRemover } = await supabase!.from('viagem_voluntarios').delete().eq('viagem_id', viagemId);
+      if (erroRemover) return `Viagem salva, mas houve erro ao atualizar a equipe: ${erroRemover.message}`;
+      if (voluntarios.length === 0) return null;
       const linhas = voluntarios.map((v) => ({ viagem_id: viagemId, ...v }));
-      const { error: erroVoluntarios } = await supabase.from('viagem_voluntarios').insert(linhas);
-      if (erroVoluntarios) {
-        return { erro: `Viagem salva, mas houve erro ao vincular a equipe: ${erroVoluntarios.message}` };
+      const { error } = await supabase!.from('viagem_voluntarios').insert(linhas);
+      return error ? `Viagem salva, mas houve erro ao vincular a equipe: ${error.message}` : null;
+    }
+
+    async function sincronizarAtendimentos(): Promise<string | null> {
+      const metricas: Record<string, number | null> = {};
+      for (const campo of ATENDIMENTOS_CAMPOS) {
+        metricas[campo.name] = inteiroOuNulo(formData.get(campo.name));
       }
+      const { error } = await supabase!.from('atendimentos').upsert({ viagem_id: viagemId, ...metricas });
+      return error ? `Viagem salva, mas houve erro ao salvar os atendimentos: ${error.message}` : null;
     }
 
-    const metricas: Record<string, number | null> = {};
-    for (const campo of ATENDIMENTOS_CAMPOS) {
-      metricas[campo.name] = inteiroOuNulo(formData.get(campo.name));
-    }
-
-    const { error: erroAtendimentos } = await supabase
-      .from('atendimentos')
-      .upsert({ viagem_id: viagemId, ...metricas });
-    if (erroAtendimentos) {
-      return { erro: `Viagem salva, mas houve erro ao salvar os atendimentos: ${erroAtendimentos.message}` };
+    const erros = await Promise.all([
+      sincronizarViagemParceiros(),
+      sincronizarViagemComunidades(),
+      sincronizarViagemVoluntarios(),
+      sincronizarAtendimentos(),
+    ]);
+    const primeiroErro = erros.find((e): e is string => e !== null);
+    if (primeiroErro) {
+      return { erro: primeiroErro };
     }
   } catch (err) {
     return { erro: err instanceof Error ? err.message : 'Erro inesperado ao salvar a viagem.' };
   }
 
   revalidatePath('/admin');
+  revalidatePath(`/admin/${viagemId}`);
   revalidatePath('/viagens');
-  redirect('/admin');
+  return { sucesso: true, salvoEm: Date.now() };
 }
 
 export async function excluirViagemIpm(viagemId: string): Promise<void> {

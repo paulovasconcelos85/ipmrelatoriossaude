@@ -1,11 +1,12 @@
 'use client';
 
-import { useActionState, useState, type ChangeEvent } from 'react';
+import { useActionState, useEffect, useState, type ChangeEvent } from 'react';
 import { useFormStatus } from 'react-dom';
 import { atualizarViagemIpm } from '../actions';
 import { ATENDIMENTOS_GRUPOS } from '@/lib/atendimentos-fields';
 import { atualizarListaDinamica, atualizarListaVoluntarios, type LinhaVoluntario } from '@/lib/campos-dinamicos';
 import type { Lookup, Profissional, ViagemIpm } from '@/lib/viagens-ipm';
+import Combobox from '@/components/Combobox';
 
 function BotaoSalvar() {
   const { pending } = useFormStatus();
@@ -44,6 +45,13 @@ export default function EditarViagemForm({
   funcoesVoluntario: string[];
 }) {
   const [estado, formAction] = useActionState(atualizarViagemIpm, undefined);
+
+  useEffect(() => {
+    if (estado?.sucesso) {
+      window.alert('Alterações salvas com sucesso!');
+    }
+  }, [estado?.salvoEm, estado?.sucesso]);
+
   const [tipoTransporte, setTipoTransporte] = useState(viagem.tipo_transporte ?? '');
   const ehTransporteAquatico = tipoTransporte.trim().toLowerCase() === 'barco';
 
@@ -127,74 +135,38 @@ export default function EditarViagemForm({
           </label>
           <label className="flex flex-col gap-1 text-sm font-semibold text-slate-600">
             Tipo de missão
-            <input
-              type="text"
+            <Combobox
               name="tipo_missao"
-              list="lista-tipos-missao"
+              options={tiposMissao}
               defaultValue={viagem.tipo_missao ?? ''}
               placeholder="Viagem de barco, Avanço Missionário, Ação missionária..."
-              autoComplete="off"
-              className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
             />
-            <datalist id="lista-tipos-missao">
-              {tiposMissao.map((t) => (
-                <option key={t} value={t} />
-              ))}
-            </datalist>
           </label>
           <label className="flex flex-col gap-1 text-sm font-semibold text-slate-600">
             Área
-            <input
-              type="text"
+            <Combobox
               name="area"
-              list="lista-areas"
+              options={areas}
               defaultValue={viagem.area ?? ''}
               placeholder="Rio Negro, Baixo Amazonas..."
-              autoComplete="off"
-              className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
             />
-            <datalist id="lista-areas">
-              {areas.map((a) => (
-                <option key={a} value={a} />
-              ))}
-            </datalist>
           </label>
           <label className="flex flex-col gap-1 text-sm font-semibold text-slate-600">
             Local
-            <input
-              type="text"
-              name="local"
-              list="lista-locais"
-              defaultValue={viagem.local ?? ''}
-              autoComplete="off"
-              className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
-            />
-            <datalist id="lista-locais">
-              {locais.map((l) => (
-                <option key={l} value={l} />
-              ))}
-            </datalist>
+            <Combobox name="local" options={locais} defaultValue={viagem.local ?? ''} />
           </label>
           <div className="flex flex-col gap-2 sm:col-span-2">
             <span className="text-sm font-semibold text-slate-600">Comunidades atendidas</span>
             {comunidadesDigitadas.map((valor, i) => (
-              <input
+              <Combobox
                 key={i}
-                type="text"
                 name="comunidades"
-                list="lista-comunidades"
+                options={comunidades.map((c) => c.nome)}
                 value={valor}
-                onChange={(e) => alterarComunidade(i, e.target.value)}
+                onValueChange={(v) => alterarComunidade(i, v)}
                 placeholder={i === 0 ? 'Nome da comunidade, vila...' : 'Adicionar outra comunidade...'}
-                autoComplete="off"
-                className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
               />
             ))}
-            <datalist id="lista-comunidades">
-              {comunidades.map((c) => (
-                <option key={c.id} value={c.nome} />
-              ))}
-            </datalist>
           </div>
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 sm:col-span-2">
             <input type="checkbox" name="cancelada" defaultChecked={viagem.cancelada} />
@@ -208,37 +180,17 @@ export default function EditarViagemForm({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm font-semibold text-slate-600">
             Tipo de transporte
-            <input
-              type="text"
+            <Combobox
               name="tipo_transporte"
-              list="lista-tipos-transporte"
+              options={tiposTransporte.map((t) => t.nome)}
               value={tipoTransporte}
-              onChange={(e) => setTipoTransporte(e.target.value)}
-              autoComplete="off"
-              className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
+              onValueChange={setTipoTransporte}
             />
-            <datalist id="lista-tipos-transporte">
-              {tiposTransporte.map((t) => (
-                <option key={t.id} value={t.nome} />
-              ))}
-            </datalist>
           </label>
           {ehTransporteAquatico && (
             <label className="flex flex-col gap-1 text-sm font-semibold text-slate-600">
               Barco
-              <input
-                type="text"
-                name="barco"
-                list="lista-barcos"
-                defaultValue={viagem.barco ?? ''}
-                autoComplete="off"
-                className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
-              />
-              <datalist id="lista-barcos">
-                {barcos.map((b) => (
-                  <option key={b.id} value={b.nome} />
-                ))}
-              </datalist>
+              <Combobox name="barco" options={barcos.map((b) => b.nome)} defaultValue={viagem.barco ?? ''} />
             </label>
           )}
         </div>
@@ -249,31 +201,20 @@ export default function EditarViagemForm({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm font-semibold text-slate-600">
             Coordenador
-            <input
-              type="text"
+            <Combobox
               name="coordenador"
-              list="lista-profissionais"
+              options={profissionais.map((p) => p.nome)}
               defaultValue={viagem.coordenador ?? ''}
-              autoComplete="off"
-              className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm font-semibold text-slate-600">
             Líder da equipe de saúde
-            <input
-              type="text"
+            <Combobox
               name="lider"
-              list="lista-profissionais"
+              options={profissionais.map((p) => p.nome)}
               defaultValue={viagem.lider_saude ?? ''}
-              autoComplete="off"
-              className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
             />
           </label>
-          <datalist id="lista-profissionais">
-            {profissionais.map((p) => (
-              <option key={p.id} value={p.nome} />
-            ))}
-          </datalist>
         </div>
 
         <h3 className="mb-3 mt-6 text-sm font-bold text-slate-700">Profissionais que foram na viagem</h3>
@@ -289,51 +230,23 @@ export default function EditarViagemForm({
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
                     Cargo/função
-                    <div className="relative">
-                      <input
-                        type="text"
-                        name="voluntario_funcao"
-                        list="lista-funcoes-voluntario"
-                        value={linha.funcao}
-                        onChange={(e) => alterarVoluntario(i, 'funcao', e.target.value)}
-                        placeholder="Toque para ver os cargos já usados..."
-                        autoComplete="off"
-                        className="w-full rounded-lg border border-slate-300 py-2 pl-3 pr-8 text-base text-slate-900"
-                      />
-                      <button
-                        type="button"
-                        tabIndex={-1}
-                        aria-label="Ver cargos já usados"
-                        onClick={(e) => {
-                          const input = e.currentTarget.previousElementSibling as
-                            | (HTMLInputElement & { showPicker?: () => void })
-                            | null;
-                          input?.focus();
-                          input?.showPicker?.();
-                        }}
-                        className="absolute inset-y-0 right-0 flex w-8 items-center justify-center text-slate-400"
-                      >
-                        ▾
-                      </button>
-                    </div>
+                    <Combobox
+                      name="voluntario_funcao"
+                      options={funcoesVoluntario}
+                      value={linha.funcao}
+                      onValueChange={(v) => alterarVoluntario(i, 'funcao', v)}
+                      placeholder="Toque para ver os cargos já usados..."
+                    />
                   </label>
                   <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
                     Nome
-                    <input
-                      type="text"
+                    <Combobox
                       name="voluntario_nome"
-                      list={`lista-profissionais-voluntario-${i}`}
+                      options={profissionaisDoCargo.map((p) => p.nome)}
                       value={linha.nome}
-                      onChange={(e) => alterarVoluntario(i, 'nome', e.target.value)}
+                      onValueChange={(v) => alterarVoluntario(i, 'nome', v)}
                       placeholder="Escolha o cargo para filtrar os nomes"
-                      autoComplete="off"
-                      className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
                     />
-                    <datalist id={`lista-profissionais-voluntario-${i}`}>
-                      {profissionaisDoCargo.map((p) => (
-                        <option key={p.id} value={p.nome} />
-                      ))}
-                    </datalist>
                   </label>
                 </div>
                 <details open={linha.observacao.trim() !== ''}>
@@ -353,35 +266,22 @@ export default function EditarViagemForm({
             );
           })}
         </div>
-        <datalist id="lista-funcoes-voluntario">
-          {funcoesVoluntario.map((f) => (
-            <option key={f} value={f} />
-          ))}
-        </datalist>
       </section>
 
       <section className="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-lg font-bold text-blue-900">Parceiros</h2>
         <div className="flex flex-col gap-2">
           {parceirosDigitados.map((valor, i) => (
-            <input
+            <Combobox
               key={i}
-              type="text"
               name="parceiros"
-              list="lista-parceiros"
+              options={parceiros.map((p) => p.nome)}
               value={valor}
-              onChange={(e) => alterarParceiro(i, e.target.value)}
+              onValueChange={(v) => alterarParceiro(i, v)}
               placeholder={i === 0 ? 'Nome do parceiro' : 'Adicionar outro parceiro...'}
-              autoComplete="off"
-              className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
             />
           ))}
         </div>
-        <datalist id="lista-parceiros">
-          {parceiros.map((p) => (
-            <option key={p.id} value={p.nome} />
-          ))}
-        </datalist>
       </section>
 
       <section className="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-sm">
