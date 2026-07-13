@@ -157,3 +157,13 @@ export const ATENDIMENTOS_GRUPOS: AtendimentoGrupo[] = [
 ];
 
 export const ATENDIMENTOS_CAMPOS = ATENDIMENTOS_GRUPOS.flatMap((g) => g.campos);
+
+/** Agrupa os atendimentos de uma viagem por grupo, mantendo só os campos com valor > 0. */
+export function gruposAtendimentoComValores(viagem: { atendimentos: Record<string, number | null> }) {
+  return ATENDIMENTOS_GRUPOS.map((grupo) => ({
+    titulo: grupo.titulo,
+    campos: grupo.campos
+      .map((campo) => ({ label: campo.label, valor: viagem.atendimentos[campo.name], destaque: campo.destaque }))
+      .filter((c) => typeof c.valor === 'number' && c.valor > 0),
+  })).filter((g) => g.campos.length > 0);
+}

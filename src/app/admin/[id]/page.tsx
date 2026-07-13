@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import EditarViagemForm from './EditarViagemForm';
 import FotosViagem from './FotosViagem';
+import RelatorioPdfViagem from './RelatorioPdfViagem';
 import {
   getViagemIpmPorId,
   listTiposTransporte,
@@ -65,6 +66,7 @@ export default async function EditarViagem({ params }: { params: Promise<{ id: s
           funcoesVoluntario={funcoesVoluntario}
         />
         <FotosViagem viagemId={viagem.id} fotos={viagem.fotos} />
+        <RelatorioPdfViagem viagem={viagem} />
       </main>
     </>
   );

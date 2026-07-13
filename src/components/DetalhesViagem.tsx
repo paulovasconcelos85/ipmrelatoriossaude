@@ -1,19 +1,10 @@
 import { useMemo } from 'react';
-import { ATENDIMENTOS_GRUPOS } from '@/lib/atendimentos-fields';
+import { gruposAtendimentoComValores } from '@/lib/atendimentos-fields';
 import type { ViagemIpm } from '@/lib/viagens-ipm';
-
-function grupoComValores(v: ViagemIpm) {
-  return ATENDIMENTOS_GRUPOS.map((grupo) => ({
-    titulo: grupo.titulo,
-    campos: grupo.campos
-      .map((campo) => ({ label: campo.label, valor: v.atendimentos[campo.name], destaque: campo.destaque }))
-      .filter((c) => typeof c.valor === 'number' && c.valor > 0),
-  })).filter((g) => g.campos.length > 0);
-}
 
 /** Todos os dados de uma viagem, no mesmo formato exibido na página pública "/viagens". */
 export default function DetalhesViagem({ viagem }: { viagem: ViagemIpm }) {
-  const grupos = useMemo(() => grupoComValores(viagem), [viagem]);
+  const grupos = useMemo(() => gruposAtendimentoComValores(viagem), [viagem]);
 
   return (
     <div>
