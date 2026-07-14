@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import EditarViagemForm from './EditarViagemForm';
 import FotosViagem from './FotosViagem';
-import RelatorioPdfViagem from './RelatorioPdfViagem';
+import RelatorioPdfViagem from '@/components/RelatorioPdfViagem';
 import {
   getViagemIpmPorId,
   listTiposTransporte,

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import DetalhesViagem from '@/components/DetalhesViagem';
+import RelatorioPdfViagem from '@/components/RelatorioPdfViagem';
 import { formatarPeriodo } from '@/lib/format';
 import type { ViagemIpm } from '@/lib/viagens-ipm';
 import ExcluirViagemButton from './ExcluirViagemButton';
@@ -34,13 +35,14 @@ export default function ViagemCardAdmin({ viagem, numero }: { viagem: ViagemIpm;
             <p className="text-sm text-slate-500">Parceiros: {viagem.parceiros.join(', ')}</p>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Link
             href={`/admin/${viagem.id}`}
             className="rounded-full border-2 border-blue-900 px-4 py-2 text-sm font-bold text-blue-900 transition-all duration-150 hover:bg-blue-50 active:scale-95"
           >
             Editar
           </Link>
+          <RelatorioPdfViagem viagem={viagem} />
           <ExcluirViagemButton id={viagem.id} />
         </div>
       </div>

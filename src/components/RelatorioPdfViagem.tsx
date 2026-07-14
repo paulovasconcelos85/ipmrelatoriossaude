@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { gerarRelatorioPdf } from './relatorio-pdf';
+import { gerarRelatorioPdf } from '@/lib/relatorio-pdf';
 import type { ViagemIpm } from '@/lib/viagens-ipm';
 
 export default function RelatorioPdfViagem({ viagem }: { viagem: ViagemIpm }) {

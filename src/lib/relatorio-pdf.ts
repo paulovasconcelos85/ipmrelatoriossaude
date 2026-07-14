@@ -57,6 +57,38 @@ function montarParagrafoAbertura(viagem: ViagemIpm): string {
   return `${texto}, ${clausulas.join(', ')}.`;
 }
 
+function bufferParaBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binario = '';
+  const tamanhoBloco = 0x8000;
+  for (let i = 0; i < bytes.length; i += tamanhoBloco) {
+    binario += String.fromCharCode(...bytes.subarray(i, i + tamanhoBloco));
+  }
+  return btoa(binario);
+}
+
+async function carregarFonteComoBase64(url: string): Promise<string> {
+  const resposta = await fetch(url);
+  if (!resposta.ok) throw new Error(`Falha ao carregar fonte: ${url}`);
+  return bufferParaBase64(await resposta.arrayBuffer());
+}
+
+/** Registra a família Geist (OFL, ver public/fonts/Geist-LICENSE.txt) no lugar das fontes padrão do jsPDF. */
+async function registrarFonteGeist(doc: jsPDF): Promise<void> {
+  const [regular, bold, italic] = await Promise.all([
+    carregarFonteComoBase64('/fonts/Geist-Regular.ttf'),
+    carregarFonteComoBase64('/fonts/Geist-Bold.ttf'),
+    carregarFonteComoBase64('/fonts/Geist-Italic.ttf'),
+  ]);
+  doc.addFileToVFS('Geist-Regular.ttf', regular);
+  doc.addFont('Geist-Regular.ttf', 'Geist', 'normal');
+  doc.addFileToVFS('Geist-Bold.ttf', bold);
+  doc.addFont('Geist-Bold.ttf', 'Geist', 'bold');
+  doc.addFileToVFS('Geist-Italic.ttf', italic);
+  doc.addFont('Geist-Italic.ttf', 'Geist', 'italic');
+  doc.setFont('Geist', 'normal');
+}
+
 async function carregarLogoComProporcao(url: string): Promise<{ dataUrl: string; largura: number } | null> {
   try {
     const dataUrl = await carregarImagemComoDataUrl(url);
@@ -81,7 +113,7 @@ function novaPaginaSeNecessario(doc: jsPDF, y: number, alturaNecessaria: number)
 }
 
 function desenharTituloSecao(doc: jsPDF, titulo: string, y: number): number {
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('Geist', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(...COR_SLATE_900);
   doc.text(titulo, MARGEM, y);
@@ -107,6 +139,7 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
   ]);
 
   const doc = new jsPDF();
+  await registrarFonteGeist(doc);
 
   // Cabeçalho: logos (fundo branco, para não conflitar com o fundo dos logos) + linha divisória.
   let xLogo = MARGEM;
@@ -121,7 +154,7 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
   doc.line(MARGEM, 26, LARGURA_PAGINA - MARGEM, 26);
 
   let y = 35;
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('Geist', 'bold');
   doc.setFontSize(15);
   doc.setTextColor(...COR_AZUL_900);
   doc.text('Relatório de Viagem Missionária', MARGEM, y);
@@ -130,14 +163,14 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
   const numero = viagem.numero ? `Viagem ${viagem.numero}` : null;
   const periodo = formatarPeriodo(viagem.data_saida, viagem.data_chegada);
   const subtitulo = [numero, `${periodo}${viagem.ano ? ` de ${viagem.ano}` : ''}`].filter(Boolean).join(' · ');
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('Geist', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(...COR_SLATE_500);
   doc.text(subtitulo, MARGEM, y);
   y += 10;
 
   const paragrafoAbertura = doc.splitTextToSize(montarParagrafoAbertura(viagem), LARGURA_UTIL);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('Geist', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(...COR_SLATE_900);
   doc.text(paragrafoAbertura, MARGEM, y);
@@ -160,12 +193,12 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
     const altura = Math.max(5, linhasValor.length * 4.5);
     y = novaPaginaSeNecessario(doc, y, altura);
 
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('Geist', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(...COR_SLATE_500);
     doc.text(label, MARGEM, y);
 
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('Geist', 'normal');
     doc.setFontSize(10);
     doc.setTextColor(...COR_SLATE_900);
     doc.text(linhasValor, MARGEM + 42, y);
@@ -181,7 +214,7 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
     const alturaCaixa = linhasObs.length * 4.5 + 6;
     y = novaPaginaSeNecessario(doc, y, alturaCaixa);
     doc.roundedRect(MARGEM, y, LARGURA_UTIL, alturaCaixa, 2, 2, 'F');
-    doc.setFont('helvetica', 'italic');
+    doc.setFont('Geist', 'italic');
     doc.setFontSize(9.5);
     doc.setTextColor(...COR_SLATE_500);
     doc.text(linhasObs, MARGEM + 4, y + 5.5);
@@ -199,14 +232,14 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
       const linhas = doc.splitTextToSize(texto, LARGURA_UTIL);
       const altura = linhas.length * 4.5 + 1;
       y = novaPaginaSeNecessario(doc, y, altura);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont('Geist', 'normal');
       doc.setFontSize(9.5);
       doc.setTextColor(...COR_SLATE_900);
       doc.text(linhas, MARGEM, y);
       y += altura;
     }
   } else {
-    doc.setFont('helvetica', 'italic');
+    doc.setFont('Geist', 'italic');
     doc.setFontSize(9.5);
     doc.setTextColor(...COR_SLATE_400);
     doc.text('Ainda não registrados', MARGEM, y);
@@ -214,15 +247,34 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
   }
   y += 4;
 
-  // Atendimentos
-  const grupos = gruposAtendimentoComValores(viagem);
-  if (grupos.length > 0) {
-    y = novaPaginaSeNecessario(doc, y, 12);
-    y = desenharTituloSecao(doc, 'Atendimentos', y);
+  // Versículo de encerramento — fecha a parte textual da primeira página.
+  const versiculoTexto =
+    '"Porque Dele, e por meio Dele, e para Ele são todas as coisas. A glória eternamente. Amém!"';
+  const versiculoReferencia = '(Romanos 11.36)';
+  const linhasVersiculo = doc.splitTextToSize(versiculoTexto, LARGURA_UTIL - 20);
+  const alturaVersiculo = linhasVersiculo.length * 5 + 12;
+  y = novaPaginaSeNecessario(doc, y, alturaVersiculo);
+  doc.setFont('Geist', 'italic');
+  doc.setFontSize(10.5);
+  doc.setTextColor(...COR_AZUL_700);
+  doc.text(linhasVersiculo, LARGURA_PAGINA / 2, y, { align: 'center' });
+  y += linhasVersiculo.length * 5 + 2;
+  doc.setFont('Geist', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...COR_SLATE_500);
+  doc.text(versiculoReferencia, LARGURA_PAGINA / 2, y, { align: 'center' });
+  y += 8;
 
+  // Atendimentos — página própria (página 2).
+  const grupos = gruposAtendimentoComValores(viagem);
+  doc.addPage();
+  y = 20;
+  y = desenharTituloSecao(doc, 'Atendimentos', y);
+
+  if (grupos.length > 0) {
     for (const grupo of grupos) {
       y = novaPaginaSeNecessario(doc, y, 10);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('Geist', 'bold');
       doc.setFontSize(9.5);
       doc.setTextColor(...COR_SLATE_500);
       doc.text(grupo.titulo.toUpperCase(), MARGEM, y);
@@ -242,13 +294,13 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
         doc.setFillColor(...(campo.destaque ? COR_AZUL_50 : COR_SLATE_50));
         doc.roundedRect(x, y, larguraTile, alturaTile, 2, 2, 'F');
 
-        doc.setFont('helvetica', 'normal');
+        doc.setFont('Geist', 'normal');
         doc.setFontSize(7);
         doc.setTextColor(...(campo.destaque ? COR_AZUL_700 : COR_SLATE_500));
         const linhasLabel = doc.splitTextToSize(campo.label, larguraTile - 4);
         doc.text(linhasLabel, x + 3, y + 5);
 
-        doc.setFont('helvetica', 'bold');
+        doc.setFont('Geist', 'bold');
         doc.setFontSize(12);
         doc.setTextColor(...(campo.destaque ? COR_AZUL_900 : COR_SLATE_900));
         doc.text(String(campo.valor), x + 3, y + alturaTile - 3.5);
@@ -256,9 +308,7 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
       y += alturaTile + 7;
     }
   } else {
-    y = novaPaginaSeNecessario(doc, y, 12);
-    y = desenharTituloSecao(doc, 'Atendimentos', y);
-    doc.setFont('helvetica', 'italic');
+    doc.setFont('Geist', 'italic');
     doc.setFontSize(9.5);
     doc.setTextColor(...COR_SLATE_400);
     doc.text('Sem atendimentos registrados nesta viagem.', MARGEM, y);
@@ -272,16 +322,17 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
     y = novaPaginaSeNecessario(doc, y, alturaCaixa);
     doc.setFillColor(255, 251, 235);
     doc.roundedRect(MARGEM, y, LARGURA_UTIL, alturaCaixa, 2, 2, 'F');
-    doc.setFont('helvetica', 'italic');
+    doc.setFont('Geist', 'italic');
     doc.setFontSize(9.5);
     doc.setTextColor(146, 64, 14);
     doc.text(linhasObs, MARGEM + 4, y + 5.5);
     y += alturaCaixa + 8;
   }
 
-  // Fotos (anexo)
+  // Fotos (anexo) — página própria (página 3).
   if (fotos.length > 0) {
-    y = novaPaginaSeNecessario(doc, y, 15);
+    doc.addPage();
+    y = 20;
     y = desenharTituloSecao(doc, 'Anexo — Fotos', y);
 
     const colunas = 3;
@@ -317,7 +368,7 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
         }
 
         if (foto.legendaLinhas.length > 0) {
-          doc.setFont('helvetica', 'normal');
+          doc.setFont('Geist', 'normal');
           doc.setFontSize(7.5);
           doc.setTextColor(...COR_SLATE_500);
           doc.text(foto.legendaLinhas, x, y + alturaImagem + 4);
@@ -336,7 +387,7 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
     doc.setDrawColor(...COR_SLATE_200);
     doc.setLineWidth(0.2);
     doc.line(MARGEM, 290, LARGURA_PAGINA - MARGEM, 290);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('Geist', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(...COR_SLATE_400);
     doc.text('IPM Maria', MARGEM, 294);
