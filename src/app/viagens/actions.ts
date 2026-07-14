@@ -8,6 +8,7 @@ import {
   textoOuNulo,
   inteiroOuNulo,
   obterOuCriarPorNome,
+  resolverGruposNomesParaIds,
   calcularDiasMissao,
   resolverVoluntarios,
 } from '@/lib/form-helpers';
@@ -45,11 +46,22 @@ export async function criarViagemIpm(
     // Coordenador/líder é um papel da pessoa nesta viagem, não a profissão dela — por isso
     // não atribuímos nenhum cargo automático ao criar o profissional por aqui. O cargo real
     // (dentista, secretária de missões...) é preenchido depois na tela de Cadastros.
-    const coordenador = textoOuNulo(formData.get('coordenador'));
-    const coordenadorId = coordenador ? await obterOuCriarPorNome('profissionais', coordenador) : null;
+    const nomesCoordenadores = formData
+      .getAll('coordenadores')
+      .filter((v): v is string => typeof v === 'string')
+      .map((v) => v.trim())
+      .filter(Boolean);
 
-    const lider = textoOuNulo(formData.get('lider'));
-    const liderId = lider ? await obterOuCriarPorNome('profissionais', lider) : null;
+    const nomesLideres = formData
+      .getAll('lideres_saude')
+      .filter((v): v is string => typeof v === 'string')
+      .map((v) => v.trim())
+      .filter(Boolean);
+
+    const [coordenadorIds, liderIds] = await resolverGruposNomesParaIds('profissionais', [
+      nomesCoordenadores,
+      nomesLideres,
+    ]);
 
     const nomesParceiros = formData
       .getAll('parceiros')
@@ -91,8 +103,6 @@ export async function criarViagemIpm(
         barco_id: barcoId,
         area,
         local,
-        coordenador_id: coordenadorId,
-        lider_saude_id: liderId,
         cancelada: false,
         observacoes,
       })
@@ -104,6 +114,30 @@ export async function criarViagemIpm(
     }
 
     const viagemId = viagemCriada.id as string;
+
+    if (coordenadorIds.length > 0) {
+      const linhas = coordenadorIds.map((profissionalId, i) => ({
+        viagem_id: viagemId,
+        profissional_id: profissionalId,
+        posicao: i + 1,
+      }));
+      const { error: erroCoordenadores } = await supabase.from('viagem_coordenadores').insert(linhas);
+      if (erroCoordenadores) {
+        return { erro: `Viagem salva, mas houve erro ao vincular coordenadores: ${erroCoordenadores.message}` };
+      }
+    }
+
+    if (liderIds.length > 0) {
+      const linhas = liderIds.map((profissionalId, i) => ({
+        viagem_id: viagemId,
+        profissional_id: profissionalId,
+        posicao: i + 1,
+      }));
+      const { error: erroLideres } = await supabase.from('viagem_lideres_saude').insert(linhas);
+      if (erroLideres) {
+        return { erro: `Viagem salva, mas houve erro ao vincular líderes de saúde: ${erroLideres.message}` };
+      }
+    }
 
     if (todosParceirosIds.length > 0) {
       const linhas = todosParceirosIds.map((parceiroId, i) => ({

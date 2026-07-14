@@ -91,6 +91,33 @@ create table if not exists public.viagem_comunidades (
 
 alter table public.viagem_comunidades add column if not exists posicao smallint not null default 1;
 
+-- Coordenadores da viagem (uma viagem pode ter mais de um). Substitui viagens.coordenador_id,
+-- que fica na tabela apenas para não quebrar a view de compatibilidade viagens_calendario
+-- (usada só pelas viagens de origem 'calendario_2026', que não passam por este formulário).
+create table if not exists public.viagem_coordenadores (
+  viagem_id uuid not null references public.viagens (id) on delete cascade,
+  profissional_id uuid not null references public.profissionais (id) on delete cascade,
+  posicao smallint not null default 1,
+  primary key (viagem_id, profissional_id)
+);
+
+-- Líderes da equipe de saúde da viagem (idem: uma viagem pode ter mais de um).
+create table if not exists public.viagem_lideres_saude (
+  viagem_id uuid not null references public.viagens (id) on delete cascade,
+  profissional_id uuid not null references public.profissionais (id) on delete cascade,
+  posicao smallint not null default 1,
+  primary key (viagem_id, profissional_id)
+);
+
+-- Migra o coordenador/líder únicos já cadastrados para as novas tabelas (idempotente).
+insert into public.viagem_coordenadores (viagem_id, profissional_id, posicao)
+select id, coordenador_id, 1 from public.viagens where coordenador_id is not null
+on conflict (viagem_id, profissional_id) do nothing;
+
+insert into public.viagem_lideres_saude (viagem_id, profissional_id, posicao)
+select id, lider_saude_id, 1 from public.viagens where lider_saude_id is not null
+on conflict (viagem_id, profissional_id) do nothing;
+
 -- Voluntários que participaram da viagem (preenchido manualmente no admin).
 -- Função e observação são específicas da participação naquela viagem
 -- (ex.: "Médica", "TSB - Odontologia", observação "Auxiliando na triagem").
@@ -280,6 +307,8 @@ alter table public.profissionais enable row level security;
 alter table public.comunidades enable row level security;
 alter table public.viagens enable row level security;
 alter table public.viagem_parceiros enable row level security;
+alter table public.viagem_coordenadores enable row level security;
+alter table public.viagem_lideres_saude enable row level security;
 alter table public.viagem_comunidades enable row level security;
 alter table public.viagem_voluntarios enable row level security;
 alter table public.atendimentos enable row level security;
@@ -305,6 +334,12 @@ create policy "Permitir leitura publica de viagens" on public.viagens for select
 
 drop policy if exists "Permitir leitura publica de viagem_parceiros" on public.viagem_parceiros;
 create policy "Permitir leitura publica de viagem_parceiros" on public.viagem_parceiros for select using (true);
+
+drop policy if exists "Permitir leitura publica de viagem_coordenadores" on public.viagem_coordenadores;
+create policy "Permitir leitura publica de viagem_coordenadores" on public.viagem_coordenadores for select using (true);
+
+drop policy if exists "Permitir leitura publica de viagem_lideres_saude" on public.viagem_lideres_saude;
+create policy "Permitir leitura publica de viagem_lideres_saude" on public.viagem_lideres_saude for select using (true);
 
 drop policy if exists "Permitir leitura publica de viagem_comunidades" on public.viagem_comunidades;
 create policy "Permitir leitura publica de viagem_comunidades" on public.viagem_comunidades for select using (true);
@@ -343,6 +378,12 @@ create policy "Permitir escrita publica de viagens" on public.viagens for all us
 
 drop policy if exists "Permitir escrita publica de viagem_parceiros" on public.viagem_parceiros;
 create policy "Permitir escrita publica de viagem_parceiros" on public.viagem_parceiros for all using (true) with check (true);
+
+drop policy if exists "Permitir escrita publica de viagem_coordenadores" on public.viagem_coordenadores;
+create policy "Permitir escrita publica de viagem_coordenadores" on public.viagem_coordenadores for all using (true) with check (true);
+
+drop policy if exists "Permitir escrita publica de viagem_lideres_saude" on public.viagem_lideres_saude;
+create policy "Permitir escrita publica de viagem_lideres_saude" on public.viagem_lideres_saude for all using (true) with check (true);
 
 drop policy if exists "Permitir escrita publica de viagem_comunidades" on public.viagem_comunidades;
 create policy "Permitir escrita publica de viagem_comunidades" on public.viagem_comunidades for all using (true) with check (true);

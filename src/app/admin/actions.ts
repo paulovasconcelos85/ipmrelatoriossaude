@@ -8,6 +8,7 @@ import {
   inteiroOuNulo,
   obterOuCriarPorNome,
   resolverNomesParaIds,
+  resolverGruposNomesParaIds,
   calcularDiasMissao,
   resolverVoluntarios,
 } from '@/lib/form-helpers';
@@ -47,8 +48,17 @@ export async function atualizarViagemIpm(
     // Coordenador/líder é um papel da pessoa nesta viagem, não a profissão dela — por isso
     // não atribuímos nenhum cargo automático ao criar o profissional por aqui. O cargo real
     // (dentista, secretária de missões...) é preenchido depois na tela de Cadastros.
-    const coordenador = textoOuNulo(formData.get('coordenador'));
-    const lider = textoOuNulo(formData.get('lider'));
+    const nomesCoordenadores = formData
+      .getAll('coordenadores')
+      .filter((v): v is string => typeof v === 'string')
+      .map((v) => v.trim())
+      .filter(Boolean);
+
+    const nomesLideres = formData
+      .getAll('lideres_saude')
+      .filter((v): v is string => typeof v === 'string')
+      .map((v) => v.trim())
+      .filter(Boolean);
 
     const nomesParceiros = formData
       .getAll('parceiros')
@@ -62,28 +72,21 @@ export async function atualizarViagemIpm(
       .map((v) => v.trim())
       .filter(Boolean);
 
-    // Consultas independentes — resolvidas em paralelo para não somar uma volta de rede a cada uma.
-    async function resolverCoordenadorELider(): Promise<[string | null, string | null]> {
-      // Coordenador e líder podem ser a mesma pessoa; resolve nomes únicos primeiro para não
-      // disparar duas buscas/criações concorrentes do mesmo profissional (o que geraria duplicata).
-      const idsPorNome = new Map<string, string | null>();
-      await Promise.all(
-        Array.from(new Set([coordenador, lider].filter((v): v is string => !!v))).map(async (nome) => {
-          idsPorNome.set(nome, await obterOuCriarPorNome('profissionais', nome));
-        }),
-      );
-      return [coordenador ? (idsPorNome.get(coordenador) ?? null) : null, lider ? (idsPorNome.get(lider) ?? null) : null];
-    }
-
-    const [tipoTransporteId, barcoId, [coordenadorId, liderId], todosParceirosIds, todasComunidadesIds, voluntarios] =
-      await Promise.all([
-        tipoTransporte ? obterOuCriarPorNome('tipos_transporte', tipoTransporte) : Promise.resolve(null),
-        barco ? obterOuCriarPorNome('barcos', barco) : Promise.resolve(null),
-        resolverCoordenadorELider(),
-        resolverNomesParaIds('parceiros', nomesParceiros),
-        resolverNomesParaIds('comunidades', nomesComunidades),
-        resolverVoluntarios(formData),
-      ]);
+    const [
+      tipoTransporteId,
+      barcoId,
+      [coordenadorIds, liderIds],
+      todosParceirosIds,
+      todasComunidadesIds,
+      voluntarios,
+    ] = await Promise.all([
+      tipoTransporte ? obterOuCriarPorNome('tipos_transporte', tipoTransporte) : Promise.resolve(null),
+      barco ? obterOuCriarPorNome('barcos', barco) : Promise.resolve(null),
+      resolverGruposNomesParaIds('profissionais', [nomesCoordenadores, nomesLideres]),
+      resolverNomesParaIds('parceiros', nomesParceiros),
+      resolverNomesParaIds('comunidades', nomesComunidades),
+      resolverVoluntarios(formData),
+    ]);
 
     const { error: erroViagem } = await supabase
       .from('viagens')
@@ -97,8 +100,6 @@ export async function atualizarViagemIpm(
         barco_id: barcoId,
         area,
         local,
-        coordenador_id: coordenadorId,
-        lider_saude_id: liderId,
         cancelada,
         observacoes,
       })
@@ -108,8 +109,26 @@ export async function atualizarViagemIpm(
       return { erro: `Não foi possível salvar a viagem: ${erroViagem.message}` };
     }
 
-    // As quatro sincronizações abaixo tocam tabelas diferentes e não dependem umas das outras —
+    // As sincronizações abaixo tocam tabelas diferentes e não dependem umas das outras —
     // rodam em paralelo para não somar uma volta de rede a cada uma.
+    async function sincronizarViagemCoordenadores(): Promise<string | null> {
+      const { error: erroRemover } = await supabase!.from('viagem_coordenadores').delete().eq('viagem_id', viagemId);
+      if (erroRemover) return `Viagem salva, mas houve erro ao atualizar coordenadores: ${erroRemover.message}`;
+      if (coordenadorIds.length === 0) return null;
+      const linhas = coordenadorIds.map((profissionalId, i) => ({ viagem_id: viagemId, profissional_id: profissionalId, posicao: i + 1 }));
+      const { error } = await supabase!.from('viagem_coordenadores').insert(linhas);
+      return error ? `Viagem salva, mas houve erro ao vincular coordenadores: ${error.message}` : null;
+    }
+
+    async function sincronizarViagemLideresSaude(): Promise<string | null> {
+      const { error: erroRemover } = await supabase!.from('viagem_lideres_saude').delete().eq('viagem_id', viagemId);
+      if (erroRemover) return `Viagem salva, mas houve erro ao atualizar líderes de saúde: ${erroRemover.message}`;
+      if (liderIds.length === 0) return null;
+      const linhas = liderIds.map((profissionalId, i) => ({ viagem_id: viagemId, profissional_id: profissionalId, posicao: i + 1 }));
+      const { error } = await supabase!.from('viagem_lideres_saude').insert(linhas);
+      return error ? `Viagem salva, mas houve erro ao vincular líderes de saúde: ${error.message}` : null;
+    }
+
     async function sincronizarViagemParceiros(): Promise<string | null> {
       const { error: erroRemover } = await supabase!.from('viagem_parceiros').delete().eq('viagem_id', viagemId);
       if (erroRemover) return `Viagem salva, mas houve erro ao atualizar parceiros: ${erroRemover.message}`;
@@ -147,6 +166,8 @@ export async function atualizarViagemIpm(
     }
 
     const erros = await Promise.all([
+      sincronizarViagemCoordenadores(),
+      sincronizarViagemLideresSaude(),
       sincronizarViagemParceiros(),
       sincronizarViagemComunidades(),
       sincronizarViagemVoluntarios(),

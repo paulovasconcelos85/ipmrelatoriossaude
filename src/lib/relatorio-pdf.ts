@@ -159,8 +159,8 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
   if (viagem.comunidades.length > 0) dados.push(['Comunidades visitadas', viagem.comunidades.join(', ')]);
   if (viagem.dias_missao != null) dados.push(['Dias em missão', String(viagem.dias_missao)]);
   if (viagem.tipo_transporte) dados.push(['Transporte', viagem.tipo_transporte]);
-  if (viagem.coordenador) dados.push(['Coordenador', viagem.coordenador]);
-  if (viagem.lider_saude) dados.push(['Líder de saúde', viagem.lider_saude]);
+  if (viagem.coordenadores.length > 0) dados.push(['Coordenador(es)', viagem.coordenadores.join(', ')]);
+  if (viagem.lideres_saude.length > 0) dados.push(['Líder(es) de saúde', viagem.lideres_saude.join(', ')]);
   if (viagem.parceiros.length > 0) dados.push(['Parceiros', viagem.parceiros.join(', ')]);
 
   y = desenharTituloSecao(doc, 'Dados da viagem', y);

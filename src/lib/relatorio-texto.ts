@@ -14,7 +14,7 @@ export function ehViagemAmazon(viagem: ViagemIpm): boolean {
   return viagem.parceiros.some((p) => p.toLowerCase().includes('amazon'));
 }
 
-function juntarComE(itens: string[]): string {
+export function juntarComE(itens: string[]): string {
   if (itens.length <= 1) return itens[0] ?? '';
   return `${itens.slice(0, -1).join(', ')} e ${itens[itens.length - 1]}`;
 }
@@ -26,16 +26,16 @@ export function montarParagrafoAbertura(viagem: ViagemIpm): string {
     'missionária realizada através da Secretaria de Missões Regionais e Transculturais, sob a gestão de Juciane ' +
     'Seleguim, Gestora da Secretaria';
 
-  if (viagem.coordenador) {
-    texto += `, e coordenação de ${viagem.coordenador}`;
+  if (viagem.coordenadores.length > 0) {
+    texto += `, e coordenação de ${juntarComE(viagem.coordenadores)}`;
   }
 
   const clausulas: string[] = [];
   if (viagem.parceiros.length > 0) {
     clausulas.push(`em parceria com ${juntarComE(viagem.parceiros)}`);
   }
-  if (viagem.lider_saude) {
-    clausulas.push(`liderança de ${viagem.lider_saude}`);
+  if (viagem.lideres_saude.length > 0) {
+    clausulas.push(`liderança de ${juntarComE(viagem.lideres_saude)}`);
   }
   if (viagem.barco) {
     clausulas.push(`no barco "${viagem.barco}"`);

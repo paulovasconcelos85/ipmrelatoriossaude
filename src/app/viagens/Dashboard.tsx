@@ -194,8 +194,14 @@ export default function Dashboard({ viagens }: { viagens: ViagemIpm[] }) {
     [viagens],
   );
   const parceiros = useMemo(() => [...new Set(viagens.flatMap((v) => v.parceiros))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [viagens]);
-  const coordenadores = useMemo(() => opcoesUnicas(viagens, (v) => v.coordenador), [viagens]);
-  const lideres = useMemo(() => opcoesUnicas(viagens, (v) => v.lider_saude), [viagens]);
+  const coordenadores = useMemo(
+    () => [...new Set(viagens.flatMap((v) => v.coordenadores))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [viagens],
+  );
+  const lideres = useMemo(
+    () => [...new Set(viagens.flatMap((v) => v.lideres_saude))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [viagens],
+  );
   const barcos = useMemo(() => opcoesUnicas(viagens, (v) => v.barco), [viagens]);
   const tiposTransporte = useMemo(() => opcoesUnicas(viagens, (v) => v.tipo_transporte), [viagens]);
   const tiposMissao = useMemo(() => opcoesUnicas(viagens, (v) => v.tipo_missao), [viagens]);
@@ -215,8 +221,8 @@ export default function Dashboard({ viagens }: { viagens: ViagemIpm[] }) {
         (v) =>
           (ano === TODOS || String(v.ano) === ano) &&
           (parceiro === TODOS || v.parceiros.includes(parceiro)) &&
-          (coordenador === TODOS || v.coordenador === coordenador) &&
-          (lider === TODOS || v.lider_saude === lider) &&
+          (coordenador === TODOS || v.coordenadores.includes(coordenador)) &&
+          (lider === TODOS || v.lideres_saude.includes(lider)) &&
           (barco === TODOS || v.barco === barco) &&
           (tipoTransporte === TODOS || v.tipo_transporte === tipoTransporte) &&
           (tipoMissao === TODOS || v.tipo_missao === tipoMissao),

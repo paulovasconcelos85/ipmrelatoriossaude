@@ -20,8 +20,8 @@ export type ViagemIpm = {
   cancelada: boolean;
   tipo_transporte: string | null;
   barco: string | null;
-  coordenador: string | null;
-  lider_saude: string | null;
+  coordenadores: string[];
+  lideres_saude: string[];
   parceiros: string[];
   /** Comunidades visitadas (preenchido manualmente no admin). */
   comunidades: string[];
@@ -35,8 +35,8 @@ export type ViagemIpm = {
   /** IDs das FKs, usados para pré-selecionar campos no formulário de edição. */
   tipo_transporte_id: string | null;
   barco_id: string | null;
-  coordenador_id: string | null;
-  lider_saude_id: string | null;
+  coordenador_ids: string[];
+  lider_saude_ids: string[];
   parceiro_ids: string[];
   comunidade_ids: string[];
 };
@@ -55,12 +55,14 @@ type ViagemRow = {
   cancelada: boolean;
   tipo_transporte_id: string | null;
   barco_id: string | null;
-  coordenador_id: string | null;
-  lider_saude_id: string | null;
   tipos_transporte: { nome: string } | null;
   barcos: { nome: string } | null;
-  coordenador: { nome: string } | null;
-  lider: { nome: string } | null;
+  viagem_coordenadores:
+    | { posicao: number; profissional_id: string; profissionais: { nome: string } | null }[]
+    | null;
+  viagem_lideres_saude:
+    | { posicao: number; profissional_id: string; profissionais: { nome: string } | null }[]
+    | null;
   viagem_parceiros: { posicao: number; parceiro_id: string; parceiros: { nome: string } | null }[] | null;
   viagem_comunidades: { posicao: number; comunidade_id: string; comunidades: { nome: string } | null }[] | null;
   viagem_voluntarios:
@@ -80,12 +82,10 @@ export function urlPublicaFoto(storagePath: string): string {
 const SELECT_VIAGEM = `id, numero, ano, data_saida, data_chegada, dias_missao, tipo_missao, area, local, observacoes, cancelada,
        tipo_transporte_id,
        barco_id,
-       coordenador_id,
-       lider_saude_id,
        tipos_transporte(nome),
        barcos(nome),
-       coordenador:profissionais!coordenador_id(nome),
-       lider:profissionais!lider_saude_id(nome),
+       viagem_coordenadores(posicao, profissional_id, profissionais(nome)),
+       viagem_lideres_saude(posicao, profissional_id, profissionais(nome)),
        viagem_parceiros(posicao, parceiro_id, parceiros(nome)),
        viagem_comunidades(posicao, comunidade_id, comunidades(nome)),
        viagem_voluntarios(funcao, observacao, profissionais(nome)),
@@ -97,6 +97,8 @@ function mapRow(row: ViagemRow): ViagemIpm {
   const metricas = { ...resto };
   delete metricas.viagem_id;
 
+  const coordenadoresOrdenados = (row.viagem_coordenadores ?? []).slice().sort((a, b) => a.posicao - b.posicao);
+  const lideresOrdenados = (row.viagem_lideres_saude ?? []).slice().sort((a, b) => a.posicao - b.posicao);
   const parceirosOrdenados = (row.viagem_parceiros ?? []).slice().sort((a, b) => a.posicao - b.posicao);
   const comunidadesOrdenadas = (row.viagem_comunidades ?? []).slice().sort((a, b) => a.posicao - b.posicao);
   const fotosOrdenadas = (row.viagem_fotos ?? []).slice().sort((a, b) => a.posicao - b.posicao);
@@ -115,8 +117,10 @@ function mapRow(row: ViagemRow): ViagemIpm {
     cancelada: row.cancelada,
     tipo_transporte: row.tipos_transporte?.nome ?? null,
     barco: row.barcos?.nome ?? null,
-    coordenador: row.coordenador?.nome ?? null,
-    lider_saude: row.lider?.nome ?? null,
+    coordenadores: coordenadoresOrdenados
+      .map((c) => c.profissionais?.nome)
+      .filter((nome): nome is string => Boolean(nome)),
+    lideres_saude: lideresOrdenados.map((l) => l.profissionais?.nome).filter((nome): nome is string => Boolean(nome)),
     parceiros: parceirosOrdenados.map((p) => p.parceiros?.nome).filter((nome): nome is string => Boolean(nome)),
     comunidades: comunidadesOrdenadas.map((c) => c.comunidades?.nome).filter((nome): nome is string => Boolean(nome)),
     voluntarios: (row.viagem_voluntarios ?? [])
@@ -137,8 +141,8 @@ function mapRow(row: ViagemRow): ViagemIpm {
     atendimentosObservacoes: (atendimentosObservacoes as string | null) ?? null,
     tipo_transporte_id: row.tipo_transporte_id,
     barco_id: row.barco_id,
-    coordenador_id: row.coordenador_id,
-    lider_saude_id: row.lider_saude_id,
+    coordenador_ids: coordenadoresOrdenados.map((c) => c.profissional_id),
+    lider_saude_ids: lideresOrdenados.map((l) => l.profissional_id),
     parceiro_ids: parceirosOrdenados.map((p) => p.parceiro_id),
     comunidade_ids: comunidadesOrdenadas.map((c) => c.comunidade_id),
   };

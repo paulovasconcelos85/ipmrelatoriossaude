@@ -43,16 +43,16 @@ export default function DetalhesViagem({ viagem }: { viagem: ViagemIpm }) {
             <dd className="break-words">{viagem.tipo_transporte}</dd>
           </div>
         )}
-        {viagem.coordenador && (
+        {viagem.coordenadores.length > 0 && (
           <div className="flex flex-col">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Coordenador</dt>
-            <dd className="break-words">{viagem.coordenador}</dd>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Coordenador(es)</dt>
+            <dd className="break-words">{viagem.coordenadores.join(', ')}</dd>
           </div>
         )}
-        {viagem.lider_saude && (
+        {viagem.lideres_saude.length > 0 && (
           <div className="flex flex-col">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Líder de saúde</dt>
-            <dd className="break-words">{viagem.lider_saude}</dd>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Líder(es) de saúde</dt>
+            <dd className="break-words">{viagem.lideres_saude.join(', ')}</dd>
           </div>
         )}
         {viagem.parceiros.length > 0 && (

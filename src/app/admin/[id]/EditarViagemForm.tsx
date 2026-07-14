@@ -63,6 +63,22 @@ export default function EditarViagemForm({
     setParceirosDigitados((atual) => atualizarListaDinamica(atual, index, valor));
   }
 
+  const [coordenadoresDigitados, setCoordenadoresDigitados] = useState<string[]>(
+    viagem.coordenadores.length > 0 ? [...viagem.coordenadores, ''] : [''],
+  );
+
+  function alterarCoordenador(index: number, valor: string) {
+    setCoordenadoresDigitados((atual) => atualizarListaDinamica(atual, index, valor));
+  }
+
+  const [lideresDigitados, setLideresDigitados] = useState<string[]>(
+    viagem.lideres_saude.length > 0 ? [...viagem.lideres_saude, ''] : [''],
+  );
+
+  function alterarLider(index: number, valor: string) {
+    setLideresDigitados((atual) => atualizarListaDinamica(atual, index, valor));
+  }
+
   const [comunidadesDigitadas, setComunidadesDigitadas] = useState<string[]>(
     viagem.comunidades.length > 0 ? [...viagem.comunidades, ''] : [''],
   );
@@ -199,22 +215,32 @@ export default function EditarViagemForm({
       <section className="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-lg font-bold text-blue-900">Equipe</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="flex flex-col gap-1 text-sm font-semibold text-slate-600">
-            Coordenador
-            <Combobox
-              name="coordenador"
-              options={profissionais.map((p) => p.nome)}
-              defaultValue={viagem.coordenador ?? ''}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-semibold text-slate-600">
-            Líder da equipe de saúde
-            <Combobox
-              name="lider"
-              options={profissionais.map((p) => p.nome)}
-              defaultValue={viagem.lider_saude ?? ''}
-            />
-          </label>
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-slate-600">Coordenador(es)</span>
+            {coordenadoresDigitados.map((valor, i) => (
+              <Combobox
+                key={i}
+                name="coordenadores"
+                options={profissionais.map((p) => p.nome)}
+                value={valor}
+                onValueChange={(v) => alterarCoordenador(i, v)}
+                placeholder={i === 0 ? 'Nome do coordenador' : 'Adicionar outro coordenador...'}
+              />
+            ))}
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-slate-600">Líder(es) da equipe de saúde</span>
+            {lideresDigitados.map((valor, i) => (
+              <Combobox
+                key={i}
+                name="lideres_saude"
+                options={profissionais.map((p) => p.nome)}
+                value={valor}
+                onValueChange={(v) => alterarLider(i, v)}
+                placeholder={i === 0 ? 'Nome do líder de saúde' : 'Adicionar outro líder...'}
+              />
+            ))}
+          </div>
         </div>
 
         <h3 className="mb-3 mt-6 text-sm font-bold text-slate-700">Profissionais que foram na viagem</h3>

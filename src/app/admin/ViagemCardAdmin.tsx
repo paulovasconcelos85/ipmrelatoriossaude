@@ -29,7 +29,7 @@ export default function ViagemCardAdmin({ viagem, numero }: { viagem: ViagemIpm;
           </p>
           {viagem.barco && <p className="text-sm text-slate-500">Barco: {viagem.barco}</p>}
           <p className="text-sm text-slate-500">
-            {viagem.coordenador ? `Coordenador: ${viagem.coordenador}` : 'Sem coordenador'}
+            {viagem.coordenadores.length > 0 ? `Coordenador(es): ${viagem.coordenadores.join(', ')}` : 'Sem coordenador'}
           </p>
           {viagem.parceiros.length > 0 && (
             <p className="text-sm text-slate-500">Parceiros: {viagem.parceiros.join(', ')}</p>

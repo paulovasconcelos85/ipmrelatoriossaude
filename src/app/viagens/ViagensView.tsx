@@ -114,8 +114,12 @@ function ViagensTabela({ viagens }: { viagens: ViagemIpm[] }) {
               <td className="whitespace-normal px-3 py-3 text-slate-700">
                 {v.parceiros.length > 0 ? v.parceiros.join(', ') : '—'}
               </td>
-              <td className="px-3 py-3 text-slate-700">{v.coordenador ?? '—'}</td>
-              <td className="px-3 py-3 text-slate-700">{v.lider_saude ?? '—'}</td>
+              <td className="whitespace-normal px-3 py-3 text-slate-700">
+                {v.coordenadores.length > 0 ? v.coordenadores.join(', ') : '—'}
+              </td>
+              <td className="whitespace-normal px-3 py-3 text-slate-700">
+                {v.lideres_saude.length > 0 ? v.lideres_saude.join(', ') : '—'}
+              </td>
               <td className="whitespace-normal px-3 py-3 text-slate-700">
                 {v.voluntarios.length > 0
                   ? v.voluntarios.map((vol) => (vol.funcao ? `${vol.nome} (${vol.funcao})` : vol.nome)).join(', ')

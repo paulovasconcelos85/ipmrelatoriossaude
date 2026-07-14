@@ -71,6 +71,32 @@ export async function resolverNomesParaIds(
 }
 
 /**
+ * Como `resolverNomesParaIds`, mas para vários grupos de nomes de uma vez (ex.: coordenadores
+ * e líderes de saúde), resolvendo o conjunto combinado de nomes únicos primeiro. Evita que a
+ * mesma pessoa, aparecendo em dois grupos (ex.: coordenadora que também é líder de saúde),
+ * dispare duas buscas/criações concorrentes do mesmo profissional — o que geraria duplicata.
+ */
+export async function resolverGruposNomesParaIds(
+  tabela: 'barcos' | 'profissionais' | 'parceiros' | 'tipos_transporte' | 'comunidades',
+  grupos: string[][],
+): Promise<string[][]> {
+  const nomesUnicos = Array.from(new Set(grupos.flat().map((n) => n.trim()).filter(Boolean)));
+  const idsPorNome = new Map<string, string | null>();
+  await Promise.all(
+    nomesUnicos.map(async (nome) => {
+      idsPorNome.set(nome, await obterOuCriarPorNome(tabela, nome));
+    }),
+  );
+  return grupos.map((nomes) =>
+    nomes
+      .map((n) => n.trim())
+      .filter(Boolean)
+      .map((n) => idsPorNome.get(n))
+      .filter((id): id is string => !!id),
+  );
+}
+
+/**
  * Lê as linhas dinâmicas de "Profissionais que foram na viagem" (nome, cargo/função,
  * observação) do FormData e resolve cada nome para um profissional (existente ou novo).
  * Descarta linhas sem nome; se o mesmo profissional aparecer mais de uma vez, mantém a última.
