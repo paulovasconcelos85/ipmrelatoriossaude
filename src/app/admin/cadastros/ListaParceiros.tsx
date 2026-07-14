@@ -23,6 +23,7 @@ function LinhaEditavel({ item }: { item: Parceiro }) {
   const [estado, formAction] = useActionState(atualizarParceiro, undefined);
   const [pendingExclusao, startTransition] = useTransition();
   const [erroExclusao, setErroExclusao] = useState<string | null>(null);
+  const [alterado, setAlterado] = useState(false);
 
   return (
     <li className="border-b border-slate-100 py-2 last:border-0">
@@ -33,6 +34,7 @@ function LinhaEditavel({ item }: { item: Parceiro }) {
           name="nome"
           defaultValue={item.nome}
           placeholder="Nome"
+          onChange={() => setAlterado(true)}
           className="min-w-40 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-900"
         />
         <input
@@ -40,6 +42,7 @@ function LinhaEditavel({ item }: { item: Parceiro }) {
           name="cidade"
           defaultValue={item.cidade ?? ''}
           placeholder="Cidade"
+          onChange={() => setAlterado(true)}
           className="w-32 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-900"
         />
         <input
@@ -47,9 +50,10 @@ function LinhaEditavel({ item }: { item: Parceiro }) {
           name="pais"
           defaultValue={item.pais ?? ''}
           placeholder="País"
+          onChange={() => setAlterado(true)}
           className="w-28 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-900"
         />
-        <BotaoSalvar texto="Salvar" />
+        {alterado && <BotaoSalvar texto="Salvar" />}
         <button
           type="button"
           disabled={pendingExclusao}
@@ -82,7 +86,7 @@ export default function ListaParceiros({ itens }: { itens: Parceiro[] }) {
       <ul className="mb-4 flex flex-col">
         {itens.length === 0 && <li className="py-2 text-sm text-slate-400">Nenhum registro ainda.</li>}
         {itens.map((item) => (
-          <LinhaEditavel key={item.id} item={item} />
+          <LinhaEditavel key={`${item.id}:${item.nome}:${item.cidade ?? ''}:${item.pais ?? ''}`} item={item} />
         ))}
       </ul>
 

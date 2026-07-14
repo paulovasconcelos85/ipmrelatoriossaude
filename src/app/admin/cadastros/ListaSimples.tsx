@@ -26,6 +26,7 @@ function LinhaEditavel({ tabela, item }: { tabela: Tabela; item: Lookup }) {
   const [estado, formAction] = useActionState(atualizarComTabela, undefined);
   const [pendingExclusao, startTransition] = useTransition();
   const [erroExclusao, setErroExclusao] = useState<string | null>(null);
+  const [alterado, setAlterado] = useState(false);
 
   return (
     <li className="border-b border-slate-100 py-2 last:border-0">
@@ -35,9 +36,10 @@ function LinhaEditavel({ tabela, item }: { tabela: Tabela; item: Lookup }) {
           type="text"
           name="nome"
           defaultValue={item.nome}
+          onChange={() => setAlterado(true)}
           className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-900"
         />
-        <BotaoSalvar texto="Salvar" />
+        {alterado && <BotaoSalvar texto="Salvar" />}
         <button
           type="button"
           disabled={pendingExclusao}
@@ -79,7 +81,7 @@ export default function ListaSimples({
       <ul className="mb-4 flex flex-col">
         {itens.length === 0 && <li className="py-2 text-sm text-slate-400">Nenhum registro ainda.</li>}
         {itens.map((item) => (
-          <LinhaEditavel key={item.id} tabela={tabela} item={item} />
+          <LinhaEditavel key={`${item.id}:${item.nome}`} tabela={tabela} item={item} />
         ))}
       </ul>
 
