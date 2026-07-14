@@ -2,6 +2,13 @@ import jsPDF from 'jspdf';
 import { gruposAtendimentoComValores } from '@/lib/atendimentos-fields';
 import { carregarImagemComoDataUrl } from '@/lib/carregar-imagem';
 import { formatarDataPorExtenso, formatarPeriodo } from '@/lib/format';
+import {
+  ASSINATURAS_RELATORIO,
+  ehViagemAmazon,
+  montarParagrafoAbertura,
+  VERSICULO_REFERENCIA,
+  VERSICULO_TEXTO,
+} from '@/lib/relatorio-texto';
 import type { ViagemIpm } from '@/lib/viagens-ipm';
 
 // Paleta alinhada com o resto do app (ver src/app/viagens/Dashboard.tsx).
@@ -19,42 +26,6 @@ const LARGURA_PAGINA = 210;
 const ALTURA_UTIL_PAGINA = 282;
 const LARGURA_UTIL = LARGURA_PAGINA - MARGEM * 2;
 const ALTURA_LOGO = 14;
-
-function ehViagemAmazon(viagem: ViagemIpm): boolean {
-  return viagem.parceiros.some((p) => p.toLowerCase().includes('amazon'));
-}
-
-function juntarComE(itens: string[]): string {
-  if (itens.length <= 1) return itens[0] ?? '';
-  return `${itens.slice(0, -1).join(', ')} e ${itens[itens.length - 1]}`;
-}
-
-/** Parágrafo de abertura do relatório, nos moldes dos relatórios em Word usados até hoje. */
-function montarParagrafoAbertura(viagem: ViagemIpm): string {
-  let texto =
-    'Relatório dos atendimentos da equipe de saúde da Igreja Presbiteriana de Manaus (IP Manaus) na viagem ' +
-    'missionária realizada através da Secretaria de Missões Regionais e Transculturais, sob a gestão de Juciane ' +
-    'Seleguim, Gestora da Secretaria';
-
-  if (viagem.coordenador) {
-    texto += `, e coordenação de ${viagem.coordenador}`;
-  }
-
-  const clausulas: string[] = [];
-  if (viagem.parceiros.length > 0) {
-    clausulas.push(`em parceria com ${juntarComE(viagem.parceiros)}`);
-  }
-  if (viagem.lider_saude) {
-    clausulas.push(`liderança de ${viagem.lider_saude}`);
-  }
-  if (viagem.barco) {
-    clausulas.push(`no barco "${viagem.barco}"`);
-  }
-  const periodo = formatarPeriodo(viagem.data_saida, viagem.data_chegada);
-  clausulas.push(`nos dias ${periodo}${viagem.ano ? ` de ${viagem.ano}` : ''}`);
-
-  return `${texto}, ${clausulas.join(', ')}.`;
-}
 
 function bufferParaBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
@@ -88,15 +59,19 @@ async function registrarFontePersonalizada(doc: jsPDF): Promise<void> {
   doc.setFont('PublicSans', 'normal');
 }
 
+function carregarDimensoesImagem(dataUrl: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => reject(new Error('Falha ao ler dimensões da imagem'));
+    img.src = dataUrl;
+  });
+}
+
 async function carregarLogoComProporcao(url: string): Promise<{ dataUrl: string; largura: number } | null> {
   try {
     const dataUrl = await carregarImagemComoDataUrl(url);
-    const dimensoes = await new Promise<{ width: number; height: number }>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-      img.onerror = () => reject(new Error(`Falha ao ler dimensões da imagem: ${url}`));
-      img.src = dataUrl;
-    });
+    const dimensoes = await carregarDimensoesImagem(dataUrl);
     return { dataUrl, largura: (ALTURA_LOGO * dimensoes.width) / dimensoes.height };
   } catch {
     return null;
@@ -129,9 +104,11 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
     Promise.all(
       viagem.fotos.map(async (foto) => {
         try {
-          return { ...foto, dataUrl: await carregarImagemComoDataUrl(foto.url) };
+          const dataUrl = await carregarImagemComoDataUrl(foto.url);
+          const dimensoes = await carregarDimensoesImagem(dataUrl).catch(() => null);
+          return { ...foto, dataUrl, aspecto: dimensoes ? dimensoes.width / dimensoes.height : null };
         } catch {
-          return { ...foto, dataUrl: null };
+          return { ...foto, dataUrl: null, aspecto: null };
         }
       }),
     ),
@@ -172,7 +149,7 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
   doc.setFont('PublicSans', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(...COR_SLATE_900);
-  doc.text(paragrafoAbertura, MARGEM, y);
+  doc.text(paragrafoAbertura, MARGEM, y, { align: 'justify', maxWidth: LARGURA_UTIL });
   y += paragrafoAbertura.length * 5 + 4;
 
   // Dados da viagem (pares label/valor, mesmos campos de DetalhesViagem.tsx).
@@ -246,13 +223,17 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
   }
   y += 3;
 
-  // Versículo de encerramento — fecha a parte textual da primeira página.
-  const versiculoTexto =
-    '"Porque Dele, e por meio Dele, e para Ele são todas as coisas. A glória eternamente. Amém!"';
-  const versiculoReferencia = '(Romanos 11.36)';
-  const linhasVersiculo = doc.splitTextToSize(versiculoTexto, LARGURA_UTIL - 20);
+  // Versículo de encerramento + assinaturas: tratados como um bloco só, para nunca serem
+  // separados entre páginas (ex.: os nomes da Gestora e da Secretaria ficarem sozinhos numa
+  // página nova caso a lista de voluntários ou outro dado cresça).
+  const linhasVersiculo = doc.splitTextToSize(VERSICULO_TEXTO, LARGURA_UTIL - 20);
   const alturaVersiculo = linhasVersiculo.length * 5 + 9;
-  y = novaPaginaSeNecessario(doc, y, alturaVersiculo);
+
+  const assinaturas = ASSINATURAS_RELATORIO;
+  const alturaAssinaturas = 9 + assinaturas.length * 9.5;
+
+  y = novaPaginaSeNecessario(doc, y, alturaVersiculo + alturaAssinaturas);
+
   doc.setFont('PublicSans', 'italic');
   doc.setFontSize(10.5);
   doc.setTextColor(...COR_AZUL_700);
@@ -261,16 +242,9 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
   doc.setFont('PublicSans', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...COR_SLATE_500);
-  doc.text(versiculoReferencia, LARGURA_PAGINA / 2, y, { align: 'center' });
+  doc.text(VERSICULO_REFERENCIA, LARGURA_PAGINA / 2, y, { align: 'center' });
   y += 6;
 
-  // Assinaturas — encerram a parte textual, antes da quebra para os atendimentos.
-  const assinaturas: [string, string][] = [
-    ['Juciane Seleguim', 'Gestora da Secretaria de Missões Regional e Transcultural'],
-    ['Maria do Carmo Rocha Pessoa', 'Secretaria de Saúde IP Manaus'],
-  ];
-  const alturaAssinaturas = 9 + assinaturas.length * 9.5;
-  y = novaPaginaSeNecessario(doc, y, alturaAssinaturas);
   doc.setFont('PublicSans', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(...COR_SLATE_900);
@@ -362,20 +336,30 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
     y = 20;
     y = desenharTituloSecao(doc, 'Anexo — Fotos', y);
 
+    // Cada foto mantém sua proporção original (retrato/paisagem), como num fotojornalismo,
+    // em vez do recorte quadrado antigo — o aspecto é limitado para evitar retratos ou
+    // panorâmicas extremas que desequilibrariam a linha.
     const colunas = 3;
     const gap = 4;
     const larguraTile = (LARGURA_UTIL - gap * (colunas - 1)) / colunas;
-    const alturaImagem = larguraTile;
+    const ASPECTO_PADRAO = 4 / 3;
+    const ASPECTO_MIN = 0.62;
+    const ASPECTO_MAX = 1.9;
 
-    const fotosComLegenda = fotos.map((foto) => ({
-      ...foto,
-      legendaLinhas: foto.legenda ? (doc.splitTextToSize(foto.legenda, larguraTile) as string[]) : [],
-    }));
+    const fotosComLegenda = fotos.map((foto) => {
+      const aspecto = Math.min(ASPECTO_MAX, Math.max(ASPECTO_MIN, foto.aspecto ?? ASPECTO_PADRAO));
+      return {
+        ...foto,
+        alturaImagem: larguraTile / aspecto,
+        legendaLinhas: foto.legenda ? (doc.splitTextToSize(foto.legenda, larguraTile) as string[]) : [],
+      };
+    });
 
     for (let i = 0; i < fotosComLegenda.length; i += colunas) {
       const linha = fotosComLegenda.slice(i, i + colunas);
-      const maxLinhasLegenda = Math.max(0, ...linha.map((f) => f.legendaLinhas.length));
-      const alturaTile = alturaImagem + (maxLinhasLegenda > 0 ? maxLinhasLegenda * 4 + 3 : 0);
+      const alturaMaxImagem = Math.max(...linha.map((f) => f.alturaImagem));
+      const alturaMaxLegenda = Math.max(...linha.map((f) => (f.legendaLinhas.length > 0 ? f.legendaLinhas.length * 4 + 3 : 0)));
+      const alturaTile = alturaMaxImagem + alturaMaxLegenda;
 
       y = novaPaginaSeNecessario(doc, y, alturaTile);
 
@@ -384,21 +368,21 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
 
         if (foto.dataUrl) {
           try {
-            doc.addImage(foto.dataUrl, x, y, larguraTile, alturaImagem);
+            doc.addImage(foto.dataUrl, x, y, larguraTile, foto.alturaImagem);
           } catch {
             doc.setFillColor(...COR_SLATE_50);
-            doc.rect(x, y, larguraTile, alturaImagem, 'F');
+            doc.rect(x, y, larguraTile, foto.alturaImagem, 'F');
           }
         } else {
           doc.setFillColor(...COR_SLATE_50);
-          doc.rect(x, y, larguraTile, alturaImagem, 'F');
+          doc.rect(x, y, larguraTile, foto.alturaImagem, 'F');
         }
 
         if (foto.legendaLinhas.length > 0) {
           doc.setFont('PublicSans', 'normal');
           doc.setFontSize(7.5);
           doc.setTextColor(...COR_SLATE_500);
-          doc.text(foto.legendaLinhas, x, y + alturaImagem + 4);
+          doc.text(foto.legendaLinhas, x, y + foto.alturaImagem + 4);
         }
       });
 
