@@ -55,6 +55,11 @@ export function diaSemanaCurto(data: string): string {
   return DIAS_SEMANA[d.getDay()];
 }
 
+/** Data por extenso para o rodapé de assinatura dos relatórios (ex.: "10 de junho de 2026"). */
+export function formatarDataPorExtenso(data: Date): string {
+  return `${data.getDate()} de ${MESES[data.getMonth()]} de ${data.getFullYear()}`;
+}
+
 export function formatarPeriodo(dataSaida: string, dataRetorno: string | null): string {
   const saida = parseData(dataSaida);
   if (!dataRetorno) {

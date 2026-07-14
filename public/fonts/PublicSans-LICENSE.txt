@@ -1,0 +1,7 @@
+Public Sans — designed by the U.S. General Services Administration (USWDS).
+Released to the public domain (CC0 1.0 Universal / Unlicense-equivalent).
+https://public-sans.digital.gov/
+
+TTF files here were converted from the static WOFF2 build published on npm
+as `typeface-public-sans` (MIT-licensed packaging) using fonttools, purely
+so they can be embedded directly in generated PDFs via jsPDF.
