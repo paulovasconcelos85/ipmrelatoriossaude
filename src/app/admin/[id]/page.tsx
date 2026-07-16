@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import EditarViagemForm from './EditarViagemForm';
 import FotosViagem from './FotosViagem';
 import RelatorioPdfViagem from '@/components/RelatorioPdfViagem';
+import CompartilharWhatsapp from '@/components/CompartilharWhatsapp';
 import {
   getViagemIpmPorId,
   listTiposTransporte,
@@ -81,6 +82,7 @@ export default async function EditarViagem({ params }: { params: Promise<{ id: s
         />
         <FotosViagem viagemId={viagem.id} fotos={viagem.fotos} />
         <RelatorioPdfViagem viagem={viagem} />
+        <CompartilharWhatsapp viagem={viagem} />
       </main>
     </>
   );
