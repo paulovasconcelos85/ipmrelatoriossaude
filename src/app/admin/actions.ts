@@ -204,7 +204,7 @@ export async function atualizarViagemIpm(
     return { erro: err instanceof Error ? err.message : 'Erro inesperado ao salvar a viagem.' };
   }
 
-  revalidatePath('/admin');
+  revalidatePath('/');
   revalidatePath(`/admin/${viagemId}`);
   revalidatePath('/viagens');
   return { sucesso: true, salvoEm: Date.now() };
@@ -218,6 +218,6 @@ export async function excluirViagemIpm(viagemId: string): Promise<void> {
     throw new Error(`Não foi possível excluir a viagem: ${error.message}`);
   }
 
-  revalidatePath('/admin');
+  revalidatePath('/');
   revalidatePath('/viagens');
 }

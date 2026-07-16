@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { listViagensIpm, type ViagemIpm } from '@/lib/viagens-ipm';
-import ViagemCardAdmin from './ViagemCardAdmin';
-import { logoutAdmin } from './login/actions';
+import ViagemCardAdmin from './admin/ViagemCardAdmin';
+import { logoutAdmin } from './logout-action';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +40,9 @@ export default async function AdminViagens() {
               Administração de viagens
             </h1>
             <div className="flex items-center gap-4">
+              <Link href="/calendario" className="text-sm font-semibold text-blue-100 underline underline-offset-2">
+                Calendário
+              </Link>
               <Link href="/viagens" className="text-sm font-semibold text-blue-100 underline underline-offset-2">
                 Ver lista pública
               </Link>

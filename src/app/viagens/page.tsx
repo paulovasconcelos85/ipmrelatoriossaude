@@ -16,7 +16,7 @@ export default async function ViagensSistemaIpm() {
             <h1 className="text-xl font-extrabold leading-tight text-white sm:text-2xl">
               IPM Maria · Viagens e Atendimentos
             </h1>
-            <Link href="/" className="text-sm font-semibold text-blue-100 underline underline-offset-2">
+            <Link href="/calendario" className="text-sm font-semibold text-blue-100 underline underline-offset-2">
               Calendário 2026
             </Link>
           </div>

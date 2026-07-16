@@ -58,7 +58,7 @@ export default async function EditarViagem({ params }: { params: Promise<{ id: s
             <h1 className="text-xl font-extrabold leading-tight text-white sm:text-2xl">
               Editar viagem
             </h1>
-            <Link href="/admin" className="text-sm font-semibold text-blue-100 underline underline-offset-2">
+            <Link href="/" className="text-sm font-semibold text-blue-100 underline underline-offset-2">
               ← Voltar para a lista
             </Link>
           </div>
