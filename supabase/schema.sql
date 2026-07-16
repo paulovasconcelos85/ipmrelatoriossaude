@@ -263,6 +263,32 @@ create table if not exists public.atendimentos (
 );
 
 -- ---------------------------------------------------------------------------
+-- Itens de estatística livre (grupos "Atividades e procedimentos de saúde" e
+-- "Assistência social e doações"): em vez de uma coluna fixa por item — inviável de
+-- navegar num formulário com dezenas de opções raramente usadas —, a pessoa digita o
+-- nome do item (autocompletando os já cadastrados) e a quantidade. campos_estatisticos
+-- guarda o catálogo de nomes por grupo; atendimentos_extra guarda a quantidade por viagem.
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.campos_estatisticos (
+  id uuid primary key default gen_random_uuid(),
+  grupo text not null check (grupo in ('atividades_procedimentos_saude', 'assistencia_social_doacoes')),
+  nome text not null,
+  created_at timestamptz not null default now(),
+  unique (grupo, nome)
+);
+
+create table if not exists public.atendimentos_extra (
+  viagem_id uuid not null references public.viagens (id) on delete cascade,
+  campo_estatistico_id uuid not null references public.campos_estatisticos (id) on delete restrict,
+  quantidade int not null,
+  primary key (viagem_id, campo_estatistico_id)
+);
+
+create index if not exists atendimentos_extra_viagem_id_idx on public.atendimentos_extra (viagem_id);
+create index if not exists atendimentos_extra_campo_idx on public.atendimentos_extra (campo_estatistico_id);
+
+-- ---------------------------------------------------------------------------
 -- View de compatibilidade para a página do Calendário de Viagens 2026
 -- ---------------------------------------------------------------------------
 
@@ -313,6 +339,8 @@ alter table public.viagem_comunidades enable row level security;
 alter table public.viagem_voluntarios enable row level security;
 alter table public.atendimentos enable row level security;
 alter table public.viagem_fotos enable row level security;
+alter table public.campos_estatisticos enable row level security;
+alter table public.atendimentos_extra enable row level security;
 
 drop policy if exists "Permitir leitura publica de tipos_transporte" on public.tipos_transporte;
 create policy "Permitir leitura publica de tipos_transporte" on public.tipos_transporte for select using (true);
@@ -352,6 +380,12 @@ create policy "Permitir leitura publica de atendimentos" on public.atendimentos 
 
 drop policy if exists "Permitir leitura publica de viagem_fotos" on public.viagem_fotos;
 create policy "Permitir leitura publica de viagem_fotos" on public.viagem_fotos for select using (true);
+
+drop policy if exists "Permitir leitura publica de campos_estatisticos" on public.campos_estatisticos;
+create policy "Permitir leitura publica de campos_estatisticos" on public.campos_estatisticos for select using (true);
+
+drop policy if exists "Permitir leitura publica de atendimentos_extra" on public.atendimentos_extra;
+create policy "Permitir leitura publica de atendimentos_extra" on public.atendimentos_extra for select using (true);
 
 -- ---------------------------------------------------------------------------
 -- RLS: escrita pública (temporário, enquanto não há autenticação de admin)
@@ -396,6 +430,12 @@ create policy "Permitir escrita publica de atendimentos" on public.atendimentos 
 
 drop policy if exists "Permitir escrita publica de viagem_fotos" on public.viagem_fotos;
 create policy "Permitir escrita publica de viagem_fotos" on public.viagem_fotos for all using (true) with check (true);
+
+drop policy if exists "Permitir escrita publica de campos_estatisticos" on public.campos_estatisticos;
+create policy "Permitir escrita publica de campos_estatisticos" on public.campos_estatisticos for all using (true) with check (true);
+
+drop policy if exists "Permitir escrita publica de atendimentos_extra" on public.atendimentos_extra;
+create policy "Permitir escrita publica de atendimentos_extra" on public.atendimentos_extra for all using (true) with check (true);
 
 -- ---------------------------------------------------------------------------
 -- Storage: bucket público para as fotos das viagens

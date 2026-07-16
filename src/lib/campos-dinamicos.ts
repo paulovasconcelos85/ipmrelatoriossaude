@@ -8,6 +8,25 @@ export function atualizarListaDinamica(atual: string[], index: number, valor: st
   return [...preenchidos, ''];
 }
 
+export type LinhaEstatistica = { nome: string; quantidade: string };
+
+const LINHA_ESTATISTICA_VAZIA: LinhaEstatistica = { nome: '', quantidade: '' };
+
+/**
+ * Mesma lógica de `atualizarListaDinamica`, mas para linhas de estatística livre (nome do item +
+ * quantidade), usadas nos grupos "Atividades e procedimentos de saúde" e "Assistência social e doações".
+ */
+export function atualizarListaEstatisticas(
+  atual: LinhaEstatistica[],
+  index: number,
+  campo: keyof LinhaEstatistica,
+  valor: string,
+): LinhaEstatistica[] {
+  const atualizado = atual.map((linha, i) => (i === index ? { ...linha, [campo]: valor } : linha));
+  const preenchidos = atualizado.filter((l) => l.nome.trim() !== '' || l.quantidade.trim() !== '');
+  return [...preenchidos, { ...LINHA_ESTATISTICA_VAZIA }];
+}
+
 export type LinhaVoluntario = { nome: string; funcao: string; observacao: string };
 
 const LINHA_VOLUNTARIO_VAZIA: LinhaVoluntario = { nome: '', funcao: '', observacao: '' };

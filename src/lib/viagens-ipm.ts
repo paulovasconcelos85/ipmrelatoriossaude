@@ -5,6 +5,8 @@ export type Profissional = { id: string; nome: string; cargo: string | null };
 export type Parceiro = { id: string; nome: string; cidade: string | null; pais: string | null };
 export type Voluntario = { nome: string; funcao: string | null; observacao: string | null };
 export type Foto = { id: string; url: string; storagePath: string; legenda: string | null; posicao: number };
+/** Item de estatística livre (grupos dinâmicos "Atividades..." e "Assistência social..."), guardado em atendimentos_extra. */
+export type ItemEstatistico = { grupo: string; nome: string; quantidade: number };
 
 export type ViagemIpm = {
   id: string;
@@ -23,6 +25,8 @@ export type ViagemIpm = {
   coordenadores: string[];
   lideres_saude: string[];
   parceiros: string[];
+  /** Nomes dos parceiros com cidade/país anexados quando preenchidos, ex.: "Nome (Cidade, País)" — só para exibição. */
+  parceirosComLocal: string[];
   /** Comunidades visitadas (preenchido manualmente no admin). */
   comunidades: string[];
   /** Voluntários que participaram da viagem (preenchido manualmente no admin). */
@@ -31,6 +35,8 @@ export type ViagemIpm = {
   fotos: Foto[];
   /** Todas as colunas numéricas de public.atendimentos, exceto viagem_id. */
   atendimentos: Record<string, number | null>;
+  /** Itens dos grupos dinâmicos (nome digitado + quantidade), vindos de atendimentos_extra. */
+  atendimentosExtras: ItemEstatistico[];
   atendimentosObservacoes: string | null;
   /** IDs das FKs, usados para pré-selecionar campos no formulário de edição. */
   tipo_transporte_id: string | null;
@@ -63,12 +69,15 @@ type ViagemRow = {
   viagem_lideres_saude:
     | { posicao: number; profissional_id: string; profissionais: { nome: string } | null }[]
     | null;
-  viagem_parceiros: { posicao: number; parceiro_id: string; parceiros: { nome: string } | null }[] | null;
+  viagem_parceiros:
+    | { posicao: number; parceiro_id: string; parceiros: { nome: string; cidade: string | null; pais: string | null } | null }[]
+    | null;
   viagem_comunidades: { posicao: number; comunidade_id: string; comunidades: { nome: string } | null }[] | null;
   viagem_voluntarios:
     | { funcao: string | null; observacao: string | null; profissionais: { nome: string } | null }[]
     | null;
   atendimentos: (Record<string, number | null | string> & { viagem_id: string; observacoes: string | null }) | null;
+  atendimentos_extra: { quantidade: number; campos_estatisticos: { grupo: string; nome: string } | null }[] | null;
   viagem_fotos: { id: string; storage_path: string; legenda: string | null; posicao: number }[] | null;
 };
 
@@ -86,11 +95,18 @@ const SELECT_VIAGEM = `id, numero, ano, data_saida, data_chegada, dias_missao, t
        barcos(nome),
        viagem_coordenadores(posicao, profissional_id, profissionais(nome)),
        viagem_lideres_saude(posicao, profissional_id, profissionais(nome)),
-       viagem_parceiros(posicao, parceiro_id, parceiros(nome)),
+       viagem_parceiros(posicao, parceiro_id, parceiros(nome, cidade, pais)),
        viagem_comunidades(posicao, comunidade_id, comunidades(nome)),
        viagem_voluntarios(funcao, observacao, profissionais(nome)),
        atendimentos(*),
+       atendimentos_extra(quantidade, campos_estatisticos(grupo, nome)),
        viagem_fotos(id, storage_path, legenda, posicao)`;
+
+/** "Nome (Cidade, País)" quando cidade/país estiverem preenchidos; só "Nome" caso contrário. */
+function formatarParceiroComLocal(nome: string, cidade: string | null, pais: string | null): string {
+  const local = [cidade, pais].filter((v): v is string => Boolean(v?.trim())).join(', ');
+  return local ? `${nome} (${local})` : nome;
+}
 
 function mapRow(row: ViagemRow): ViagemIpm {
   const { observacoes: atendimentosObservacoes, ...resto } = row.atendimentos ?? { observacoes: null };
@@ -122,6 +138,9 @@ function mapRow(row: ViagemRow): ViagemIpm {
       .filter((nome): nome is string => Boolean(nome)),
     lideres_saude: lideresOrdenados.map((l) => l.profissionais?.nome).filter((nome): nome is string => Boolean(nome)),
     parceiros: parceirosOrdenados.map((p) => p.parceiros?.nome).filter((nome): nome is string => Boolean(nome)),
+    parceirosComLocal: parceirosOrdenados
+      .filter((p) => Boolean(p.parceiros?.nome))
+      .map((p) => formatarParceiroComLocal(p.parceiros!.nome, p.parceiros!.cidade, p.parceiros!.pais)),
     comunidades: comunidadesOrdenadas.map((c) => c.comunidades?.nome).filter((nome): nome is string => Boolean(nome)),
     voluntarios: (row.viagem_voluntarios ?? [])
       .filter((v) => Boolean(v.profissionais?.nome))
@@ -138,6 +157,13 @@ function mapRow(row: ViagemRow): ViagemIpm {
       posicao: f.posicao,
     })),
     atendimentos: metricas as Record<string, number | null>,
+    atendimentosExtras: (row.atendimentos_extra ?? [])
+      .filter((item) => item.campos_estatisticos)
+      .map((item) => ({
+        grupo: item.campos_estatisticos!.grupo,
+        nome: item.campos_estatisticos!.nome,
+        quantidade: item.quantidade,
+      })),
     atendimentosObservacoes: (atendimentosObservacoes as string | null) ?? null,
     tipo_transporte_id: row.tipo_transporte_id,
     barco_id: row.barco_id,
@@ -245,6 +271,26 @@ async function listValoresDistintos(coluna: 'tipo_missao' | 'area' | 'local'): P
 export const listTiposMissao = () => listValoresDistintos('tipo_missao');
 export const listAreas = () => listValoresDistintos('area');
 export const listLocais = () => listValoresDistintos('local');
+
+/**
+ * Nomes já cadastrados em campos_estatisticos, agrupados por `grupo` — usado para popular o
+ * autocomplete dos grupos dinâmicos de atendimentos ("Atividades e procedimentos de saúde" e
+ * "Assistência social e doações"), permitindo digitar um nome novo quando não houver correspondência.
+ */
+export async function listCamposEstatisticos(): Promise<Record<string, string[]>> {
+  if (!supabaseConfigured || !supabase) return {};
+  const { data, error } = await supabase.from('campos_estatisticos').select('grupo, nome').order('nome');
+  if (error) {
+    console.error('listCamposEstatisticos: erro ao consultar Supabase', error);
+    return {};
+  }
+  if (!data) return {};
+  const porGrupo: Record<string, string[]> = {};
+  for (const row of data as { grupo: string; nome: string }[]) {
+    (porGrupo[row.grupo] ??= []).push(row.nome);
+  }
+  return porGrupo;
+}
 
 /** Funções/cargos já usados em `viagem_voluntarios.funcao` (ex.: "médica", "TSB - odontologia"). */
 export async function listFuncoesVoluntario(): Promise<string[]> {

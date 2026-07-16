@@ -2,13 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { supabase, supabaseConfigured } from '@/lib/supabase/client';
-import { ATENDIMENTOS_CAMPOS } from '@/lib/atendimentos-fields';
+import { ATENDIMENTOS_CAMPOS, ATENDIMENTOS_GRUPOS } from '@/lib/atendimentos-fields';
 import {
   textoOuNulo,
   inteiroOuNulo,
   obterOuCriarPorNome,
   resolverNomesParaIds,
   resolverGruposNomesParaIds,
+  resolverItensEstatisticos,
   calcularDiasMissao,
   resolverVoluntarios,
 } from '@/lib/form-helpers';
@@ -165,6 +166,27 @@ export async function atualizarViagemIpm(
       return error ? `Viagem salva, mas houve erro ao salvar os atendimentos: ${error.message}` : null;
     }
 
+    async function sincronizarAtendimentosExtra(): Promise<string | null> {
+      const { error: erroRemover } = await supabase!.from('atendimentos_extra').delete().eq('viagem_id', viagemId);
+      if (erroRemover) return `Viagem salva, mas houve erro ao atualizar os itens extras: ${erroRemover.message}`;
+
+      const itensExtras: { campo_estatistico_id: string; quantidade: number }[] = [];
+      for (const grupo of ATENDIMENTOS_GRUPOS) {
+        if (!grupo.dinamico) continue;
+        const itens = await resolverItensEstatisticos(
+          formData,
+          grupo.dinamico.chave,
+          grupo.dinamico.campoNome,
+          grupo.dinamico.campoQtd,
+        );
+        itensExtras.push(...itens);
+      }
+      if (itensExtras.length === 0) return null;
+      const linhas = itensExtras.map((item) => ({ viagem_id: viagemId, ...item }));
+      const { error } = await supabase!.from('atendimentos_extra').insert(linhas);
+      return error ? `Viagem salva, mas houve erro ao salvar os itens extras: ${error.message}` : null;
+    }
+
     const erros = await Promise.all([
       sincronizarViagemCoordenadores(),
       sincronizarViagemLideresSaude(),
@@ -172,6 +194,7 @@ export async function atualizarViagemIpm(
       sincronizarViagemComunidades(),
       sincronizarViagemVoluntarios(),
       sincronizarAtendimentos(),
+      sincronizarAtendimentosExtra(),
     ]);
     const primeiroErro = erros.find((e): e is string => e !== null);
     if (primeiroErro) {

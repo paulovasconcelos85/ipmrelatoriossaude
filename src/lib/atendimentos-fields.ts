@@ -5,6 +5,9 @@ export type AtendimentoField = {
   destaque?: boolean;
 };
 
+/** Chave de agrupamento usada em campos_estatisticos.grupo/atendimentos_extra para os grupos dinâmicos. */
+export type ChaveGrupoDinamico = 'atividades_procedimentos_saude' | 'assistencia_social_doacoes';
+
 export type AtendimentoGrupo = {
   titulo: string;
   campos: AtendimentoField[];
@@ -12,6 +15,14 @@ export type AtendimentoGrupo = {
   destaque?: boolean;
   /** Soma automática: os `parcelas` são somados e preenchem o campo `total` a cada alteração (a pessoa pode sobrescrever depois). */
   somaAutomatica?: { total: string; parcelas: string[] };
+  /**
+   * Torna o grupo dinâmico: em vez de colunas fixas, a pessoa digita o nome do item (autocompletando os já
+   * cadastrados em campos_estatisticos, ou cadastrando um novo) e a quantidade ao lado. Os valores ficam em
+   * atendimentos_extra em vez de colunas fixas de public.atendimentos — pensado para grupos com dezenas de
+   * opções raramente usadas, onde listar tudo fixo dificulta achar o campo certo. `campos` aqui vira só a
+   * lista de nomes padrão usada para popular campos_estatisticos na migração inicial.
+   */
+  dinamico?: { chave: ChaveGrupoDinamico; campoNome: string; campoQtd: string };
 };
 
 export const ATENDIMENTOS_GRUPOS: AtendimentoGrupo[] = [
@@ -90,6 +101,11 @@ export const ATENDIMENTOS_GRUPOS: AtendimentoGrupo[] = [
   },
   {
     titulo: 'Atividades e procedimentos de saúde',
+    dinamico: {
+      chave: 'atividades_procedimentos_saude',
+      campoNome: 'atividade_saude_item_nome',
+      campoQtd: 'atividade_saude_item_qtd',
+    },
     campos: [
       { name: 'atividades_saude', label: 'Atividades de saúde' },
       { name: 'aerosolterapia', label: 'Aerosolterapia' },
@@ -131,6 +147,11 @@ export const ATENDIMENTOS_GRUPOS: AtendimentoGrupo[] = [
   },
   {
     titulo: 'Assistência social e doações',
+    dinamico: {
+      chave: 'assistencia_social_doacoes',
+      campoNome: 'assistencia_social_item_nome',
+      campoQtd: 'assistencia_social_item_qtd',
+    },
     campos: [
       { name: 'outras_atividades', label: 'Outras atividades' },
       { name: 'aconselhamento', label: 'Aconselhamento' },
@@ -156,14 +177,24 @@ export const ATENDIMENTOS_GRUPOS: AtendimentoGrupo[] = [
   },
 ];
 
-export const ATENDIMENTOS_CAMPOS = ATENDIMENTOS_GRUPOS.flatMap((g) => g.campos);
+/** Campos com coluna fixa em public.atendimentos — exclui os grupos dinâmicos (guardados em atendimentos_extra). */
+export const ATENDIMENTOS_CAMPOS = ATENDIMENTOS_GRUPOS.filter((g) => !g.dinamico).flatMap((g) => g.campos);
+
+export type ItemEstatisticoExtra = { grupo: string; nome: string; quantidade: number };
 
 /** Agrupa os atendimentos de uma viagem por grupo, mantendo só os campos com valor > 0. */
-export function gruposAtendimentoComValores(viagem: { atendimentos: Record<string, number | null> }) {
+export function gruposAtendimentoComValores(viagem: {
+  atendimentos: Record<string, number | null>;
+  atendimentosExtras: ItemEstatisticoExtra[];
+}) {
   return ATENDIMENTOS_GRUPOS.map((grupo) => ({
     titulo: grupo.titulo,
-    campos: grupo.campos
-      .map((campo) => ({ label: campo.label, valor: viagem.atendimentos[campo.name], destaque: campo.destaque }))
-      .filter((c) => typeof c.valor === 'number' && c.valor > 0),
+    campos: grupo.dinamico
+      ? viagem.atendimentosExtras
+          .filter((item) => item.grupo === grupo.dinamico!.chave)
+          .map((item) => ({ label: item.nome, valor: item.quantidade, destaque: false }))
+      : grupo.campos
+          .map((campo) => ({ label: campo.label, valor: viagem.atendimentos[campo.name], destaque: campo.destaque }))
+          .filter((c) => typeof c.valor === 'number' && c.valor > 0),
   })).filter((g) => g.campos.length > 0);
 }

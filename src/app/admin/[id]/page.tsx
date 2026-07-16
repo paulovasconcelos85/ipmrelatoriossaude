@@ -14,6 +14,7 @@ import {
   listAreas,
   listLocais,
   listFuncoesVoluntario,
+  listCamposEstatisticos,
 } from '@/lib/viagens-ipm';
 
 export const dynamic = 'force-dynamic';
@@ -21,19 +22,31 @@ export const dynamic = 'force-dynamic';
 export default async function EditarViagem({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const [viagem, tiposTransporte, barcos, parceiros, profissionais, comunidades, tiposMissao, areas, locais, funcoesVoluntario] =
-    await Promise.all([
-      getViagemIpmPorId(id),
-      listTiposTransporte(),
-      listBarcos(),
-      listParceiros(),
-      listProfissionais(),
-      listComunidades(),
-      listTiposMissao(),
-      listAreas(),
-      listLocais(),
-      listFuncoesVoluntario(),
-    ]);
+  const [
+    viagem,
+    tiposTransporte,
+    barcos,
+    parceiros,
+    profissionais,
+    comunidades,
+    tiposMissao,
+    areas,
+    locais,
+    funcoesVoluntario,
+    camposEstatisticos,
+  ] = await Promise.all([
+    getViagemIpmPorId(id),
+    listTiposTransporte(),
+    listBarcos(),
+    listParceiros(),
+    listProfissionais(),
+    listComunidades(),
+    listTiposMissao(),
+    listAreas(),
+    listLocais(),
+    listFuncoesVoluntario(),
+    listCamposEstatisticos(),
+  ]);
 
   if (!viagem) notFound();
 
@@ -64,6 +77,7 @@ export default async function EditarViagem({ params }: { params: Promise<{ id: s
           areas={areas}
           locais={locais}
           funcoesVoluntario={funcoesVoluntario}
+          camposEstatisticos={camposEstatisticos}
         />
         <FotosViagem viagemId={viagem.id} fotos={viagem.fotos} />
         <RelatorioPdfViagem viagem={viagem} />

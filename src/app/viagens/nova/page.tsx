@@ -10,23 +10,35 @@ import {
   listAreas,
   listLocais,
   listFuncoesVoluntario,
+  listCamposEstatisticos,
 } from '@/lib/viagens-ipm';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NovaViagem() {
-  const [tiposTransporte, barcos, parceiros, profissionais, comunidades, tiposMissao, areas, locais, funcoesVoluntario] =
-    await Promise.all([
-      listTiposTransporte(),
-      listBarcos(),
-      listParceiros(),
-      listProfissionais(),
-      listComunidades(),
-      listTiposMissao(),
-      listAreas(),
-      listLocais(),
-      listFuncoesVoluntario(),
-    ]);
+  const [
+    tiposTransporte,
+    barcos,
+    parceiros,
+    profissionais,
+    comunidades,
+    tiposMissao,
+    areas,
+    locais,
+    funcoesVoluntario,
+    camposEstatisticos,
+  ] = await Promise.all([
+    listTiposTransporte(),
+    listBarcos(),
+    listParceiros(),
+    listProfissionais(),
+    listComunidades(),
+    listTiposMissao(),
+    listAreas(),
+    listLocais(),
+    listFuncoesVoluntario(),
+    listCamposEstatisticos(),
+  ]);
 
   return (
     <>
@@ -54,6 +66,7 @@ export default async function NovaViagem() {
           areas={areas}
           locais={locais}
           funcoesVoluntario={funcoesVoluntario}
+          camposEstatisticos={camposEstatisticos}
         />
       </main>
     </>

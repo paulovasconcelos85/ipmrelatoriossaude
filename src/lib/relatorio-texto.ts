@@ -31,8 +31,8 @@ export function montarParagrafoAbertura(viagem: ViagemIpm): string {
   }
 
   const clausulas: string[] = [];
-  if (viagem.parceiros.length > 0) {
-    clausulas.push(`em parceria com ${juntarComE(viagem.parceiros)}`);
+  if (viagem.parceirosComLocal.length > 0) {
+    clausulas.push(`em parceria com ${juntarComE(viagem.parceirosComLocal)}`);
   }
   if (viagem.lideres_saude.length > 0) {
     clausulas.push(`liderança de ${juntarComE(viagem.lideres_saude)}`);

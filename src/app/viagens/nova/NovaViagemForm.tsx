@@ -3,8 +3,14 @@
 import { useActionState, useState, type ChangeEvent } from 'react';
 import { useFormStatus } from 'react-dom';
 import { criarViagemIpm } from '../actions';
-import { ATENDIMENTOS_GRUPOS } from '@/lib/atendimentos-fields';
-import { atualizarListaDinamica, atualizarListaVoluntarios, type LinhaVoluntario } from '@/lib/campos-dinamicos';
+import { ATENDIMENTOS_GRUPOS, type ChaveGrupoDinamico } from '@/lib/atendimentos-fields';
+import {
+  atualizarListaDinamica,
+  atualizarListaEstatisticas,
+  atualizarListaVoluntarios,
+  type LinhaEstatistica,
+  type LinhaVoluntario,
+} from '@/lib/campos-dinamicos';
 import type { Lookup, Profissional } from '@/lib/viagens-ipm';
 
 function BotaoSalvar() {
@@ -30,6 +36,7 @@ export default function NovaViagemForm({
   areas,
   locais,
   funcoesVoluntario,
+  camposEstatisticos,
 }: {
   tiposTransporte: Lookup[];
   barcos: Lookup[];
@@ -40,6 +47,7 @@ export default function NovaViagemForm({
   areas: string[];
   locais: string[];
   funcoesVoluntario: string[];
+  camposEstatisticos: Record<string, string[]>;
 }) {
   const [estado, formAction] = useActionState(criarViagemIpm, undefined);
   const [tipoTransporte, setTipoTransporte] = useState('');
@@ -77,21 +85,74 @@ export default function NovaViagemForm({
     setVoluntariosDigitados((atual) => atualizarListaVoluntarios(atual, index, campo, valor));
   }
 
+  const [itensAtividadeSaude, setItensAtividadeSaude] = useState<LinhaEstatistica[]>([{ nome: '', quantidade: '' }]);
+  const [itensAssistenciaSocial, setItensAssistenciaSocial] = useState<LinhaEstatistica[]>([
+    { nome: '', quantidade: '' },
+  ]);
+
+  const itensPorGrupoDinamico: Record<ChaveGrupoDinamico, LinhaEstatistica[]> = {
+    atividades_procedimentos_saude: itensAtividadeSaude,
+    assistencia_social_doacoes: itensAssistenciaSocial,
+  };
+  const setItensPorGrupoDinamico: Record<ChaveGrupoDinamico, (v: LinhaEstatistica[]) => void> = {
+    atividades_procedimentos_saude: setItensAtividadeSaude,
+    assistencia_social_doacoes: setItensAssistenciaSocial,
+  };
+
+  function alterarItemEstatistica(
+    chave: ChaveGrupoDinamico,
+    index: number,
+    campo: keyof LinhaEstatistica,
+    valor: string,
+  ) {
+    const setItens = setItensPorGrupoDinamico[chave];
+    setItens(atualizarListaEstatisticas(itensPorGrupoDinamico[chave], index, campo, valor));
+  }
+
+  function calcularEnfermagemAutomatica(form: HTMLFormElement) {
+    const valor = (nome: string) => {
+      const campo = form.elements.namedItem(nome) as HTMLInputElement | null;
+      const numero = campo ? parseInt(campo.value, 10) : 0;
+      return Number.isNaN(numero) ? 0 : numero;
+    };
+    const definir = (nome: string, numero: number) => {
+      const campo = form.elements.namedItem(nome) as HTMLInputElement | null;
+      if (campo) campo.value = String(numero);
+    };
+
+    const criancas = valor('criancas_medico') + valor('criancas_odonto');
+    const adolescentes = valor('adolescentes_medico') + valor('adolescentes_odonto');
+    const adultos = valor('adultos_medico') + valor('adultos_odonto');
+
+    definir('criancas_enfermagem', criancas);
+    definir('adolescentes_enfermagem', adolescentes);
+    definir('adultos_enfermagem', adultos);
+    definir('atendimentos_enfermagem', criancas + adolescentes + adultos);
+    definir('procedimentos_enfermagem', criancas * 3 + adolescentes * 3 + adultos * 5);
+  }
+
   function somarFaixasEtarias(e: ChangeEvent<HTMLDivElement>) {
     const alvo = e.target as HTMLInputElement;
+    const form = alvo.form;
+    if (!form) return;
+
     const grupo = ATENDIMENTOS_GRUPOS.find((g) => g.somaAutomatica?.parcelas.includes(alvo.name));
     const soma = grupo?.somaAutomatica;
-    const form = alvo.form;
-    if (!soma || !form) return;
+    if (soma) {
+      const total = soma.parcelas.reduce((acc, nome) => {
+        const campo = form.elements.namedItem(nome) as HTMLInputElement | null;
+        const valor = campo ? parseInt(campo.value, 10) : 0;
+        return acc + (Number.isNaN(valor) ? 0 : valor);
+      }, 0);
 
-    const total = soma.parcelas.reduce((acc, nome) => {
-      const campo = form.elements.namedItem(nome) as HTMLInputElement | null;
-      const valor = campo ? parseInt(campo.value, 10) : 0;
-      return acc + (Number.isNaN(valor) ? 0 : valor);
-    }, 0);
+      const campoTotal = form.elements.namedItem(soma.total) as HTMLInputElement | null;
+      if (campoTotal) campoTotal.value = String(total);
+    }
 
-    const campoTotal = form.elements.namedItem(soma.total) as HTMLInputElement | null;
-    if (campoTotal) campoTotal.value = String(total);
+    const grupoOrigem = ATENDIMENTOS_GRUPOS.find((g) => g.campos.some((c) => c.name === alvo.name));
+    if (grupoOrigem?.titulo === 'Atendimento médico' || grupoOrigem?.titulo === 'Atendimento odontológico') {
+      calcularEnfermagemAutomatica(form);
+    }
   }
 
   return (
@@ -414,27 +475,62 @@ export default function NovaViagemForm({
               >
                 {grupo.titulo}
               </summary>
-              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                {grupo.campos.map((campo) => (
-                  <label
-                    key={campo.name}
-                    className={
-                      campo.destaque
-                        ? 'flex flex-col gap-1 rounded-lg bg-blue-100 px-2 py-1.5 text-xs font-bold text-blue-900'
-                        : 'flex flex-col gap-1 text-xs font-semibold text-slate-500'
-                    }
-                  >
-                    {campo.label}
-                    <input
-                      type="number"
-                      name={campo.name}
-                      min={0}
-                      defaultValue={0}
-                      className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-slate-900"
-                    />
-                  </label>
-                ))}
-              </div>
+              {grupo.dinamico ? (
+                <div className="mt-3 flex flex-col gap-2">
+                  {itensPorGrupoDinamico[grupo.dinamico.chave].map((linha, i) => (
+                    <div key={i} className="flex gap-2">
+                      <input
+                        type="text"
+                        name={grupo.dinamico!.campoNome}
+                        list={`lista-${grupo.dinamico!.chave}`}
+                        value={linha.nome}
+                        onChange={(e) => alterarItemEstatistica(grupo.dinamico!.chave, i, 'nome', e.target.value)}
+                        placeholder={i === 0 ? 'Nome do item (ex.: Curativos)' : 'Adicionar outro item...'}
+                        autoComplete="off"
+                        className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                      />
+                      <input
+                        type="number"
+                        name={grupo.dinamico!.campoQtd}
+                        min={0}
+                        value={linha.quantidade}
+                        onChange={(e) =>
+                          alterarItemEstatistica(grupo.dinamico!.chave, i, 'quantidade', e.target.value)
+                        }
+                        placeholder="Qtd"
+                        className="w-24 rounded-lg border border-slate-300 px-2 py-2 text-sm text-slate-900"
+                      />
+                    </div>
+                  ))}
+                  <datalist id={`lista-${grupo.dinamico.chave}`}>
+                    {(camposEstatisticos[grupo.dinamico.chave] ?? []).map((nome) => (
+                      <option key={nome} value={nome} />
+                    ))}
+                  </datalist>
+                </div>
+              ) : (
+                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                  {grupo.campos.map((campo) => (
+                    <label
+                      key={campo.name}
+                      className={
+                        campo.destaque
+                          ? 'flex flex-col gap-1 rounded-lg bg-blue-100 px-2 py-1.5 text-xs font-bold text-blue-900'
+                          : 'flex flex-col gap-1 text-xs font-semibold text-slate-500'
+                      }
+                    >
+                      {campo.label}
+                      <input
+                        type="number"
+                        name={campo.name}
+                        min={0}
+                        defaultValue={0}
+                        className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-slate-900"
+                      />
+                    </label>
+                  ))}
+                </div>
+              )}
             </details>
           ))}
         </div>

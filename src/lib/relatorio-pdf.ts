@@ -161,7 +161,7 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
   if (viagem.tipo_transporte) dados.push(['Transporte', viagem.tipo_transporte]);
   if (viagem.coordenadores.length > 0) dados.push(['Coordenador(es)', viagem.coordenadores.join(', ')]);
   if (viagem.lideres_saude.length > 0) dados.push(['Líder(es) de saúde', viagem.lideres_saude.join(', ')]);
-  if (viagem.parceiros.length > 0) dados.push(['Parceiros', viagem.parceiros.join(', ')]);
+  if (viagem.parceirosComLocal.length > 0) dados.push(['Parceiros', viagem.parceirosComLocal.join(', ')]);
 
   y = desenharTituloSecao(doc, 'Dados da viagem', y);
   for (const [label, valor] of dados) {

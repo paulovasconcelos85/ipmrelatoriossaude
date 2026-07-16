@@ -3,13 +3,15 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { supabase, supabaseConfigured } from '@/lib/supabase/client';
-import { ATENDIMENTOS_CAMPOS } from '@/lib/atendimentos-fields';
+import { ATENDIMENTOS_CAMPOS, ATENDIMENTOS_GRUPOS } from '@/lib/atendimentos-fields';
 import {
   textoOuNulo,
   inteiroOuNulo,
   obterOuCriarPorNome,
   resolverGruposNomesParaIds,
+  resolverItensEstatisticos,
   calcularDiasMissao,
+  proximoNumeroViagem,
   resolverVoluntarios,
 } from '@/lib/form-helpers';
 
@@ -88,12 +90,13 @@ export async function criarViagemIpm(
     }
 
     const voluntarios = await resolverVoluntarios(formData);
+    const numero = await proximoNumeroViagem(ano);
 
     const { data: viagemCriada, error: erroViagem } = await supabase
       .from('viagens')
       .insert({
         origem: 'sistema_ipm',
-        numero: null,
+        numero,
         ano,
         data_saida: dataSaida,
         data_chegada: dataChegada,
@@ -182,6 +185,25 @@ export async function criarViagemIpm(
     });
     if (erroAtendimentos) {
       return { erro: `Viagem salva, mas houve erro ao salvar os atendimentos: ${erroAtendimentos.message}` };
+    }
+
+    const itensExtras: { campo_estatistico_id: string; quantidade: number }[] = [];
+    for (const grupo of ATENDIMENTOS_GRUPOS) {
+      if (!grupo.dinamico) continue;
+      const itens = await resolverItensEstatisticos(
+        formData,
+        grupo.dinamico.chave,
+        grupo.dinamico.campoNome,
+        grupo.dinamico.campoQtd,
+      );
+      itensExtras.push(...itens);
+    }
+    if (itensExtras.length > 0) {
+      const linhas = itensExtras.map((item) => ({ viagem_id: viagemId, ...item }));
+      const { error: erroExtras } = await supabase.from('atendimentos_extra').insert(linhas);
+      if (erroExtras) {
+        return { erro: `Viagem salva, mas houve erro ao salvar os itens extras: ${erroExtras.message}` };
+      }
     }
   } catch (err) {
     return { erro: err instanceof Error ? err.message : 'Erro inesperado ao salvar a viagem.' };

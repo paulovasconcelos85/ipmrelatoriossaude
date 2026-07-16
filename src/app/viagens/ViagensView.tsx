@@ -112,7 +112,7 @@ function ViagensTabela({ viagens }: { viagens: ViagemIpm[] }) {
                 {v.comunidades.length > 0 ? v.comunidades.join(', ') : '—'}
               </td>
               <td className="whitespace-normal px-3 py-3 text-slate-700">
-                {v.parceiros.length > 0 ? v.parceiros.join(', ') : '—'}
+                {v.parceirosComLocal.length > 0 ? v.parceirosComLocal.join(', ') : '—'}
               </td>
               <td className="whitespace-normal px-3 py-3 text-slate-700">
                 {v.coordenadores.length > 0 ? v.coordenadores.join(', ') : '—'}

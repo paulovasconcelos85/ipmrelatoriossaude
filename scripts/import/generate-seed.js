@@ -305,6 +305,73 @@ const METRIC_COLUMNS = [
 ];
 
 // ---------------------------------------------------------------------------
+// Grupos dinâmicos ("Atividades e procedimentos de saúde" e "Assistência social e
+// doações"): essas colunas não existem mais em public.atendimentos — viram linhas em
+// atendimentos_extra, referenciando campos_estatisticos pelo nome usado no formulário
+// (não pelo cabeçalho do CSV, que às vezes difere levemente). Precisa ficar em sincronia
+// com os dois grupos marcados `dinamico` em src/lib/atendimentos-fields.ts.
+// ---------------------------------------------------------------------------
+
+const DYNAMIC_METRIC_GROUPS = {
+  atividades_saude: ['atividades_procedimentos_saude', 'Atividades de saúde'],
+  aerosolterapia: ['atividades_procedimentos_saude', 'Aerosolterapia'],
+  aplicacao_fluor: ['atividades_procedimentos_saude', 'Aplicação de flúor'],
+  curativos: ['atividades_procedimentos_saude', 'Curativos'],
+  encaminhamentos_unidade_hospitalar: ['atividades_procedimentos_saude', 'Encaminh. p/ Unidade Hospitalar'],
+  entrega_medicamentos: ['atividades_procedimentos_saude', 'Entrega de medicamentos'],
+  escovas_cremes_dentais: ['atividades_procedimentos_saude', 'Escovas e cremes dentais'],
+  exame_hemoglobina_glicada: ['atividades_procedimentos_saude', 'Exame de hemoglobina glicada'],
+  exame_sifilis: ['atividades_procedimentos_saude', 'Exame de sífilis'],
+  exame_urina: ['atividades_procedimentos_saude', 'Exame de urina'],
+  exame_hanseniase: ['atividades_procedimentos_saude', 'Exame de hanseníase'],
+  hemograma_simples_mtx: ['atividades_procedimentos_saude', 'Hemograma simples MTX'],
+  inalacao: ['atividades_procedimentos_saude', 'Inalação'],
+  internacao_emergencia_urgencia: ['atividades_procedimentos_saude', 'Internação Emergência/Urgência'],
+  kit_higiene: ['atividades_procedimentos_saude', 'Kit de higiene'],
+  lavagem_nasal_procedimento: ['atividades_procedimentos_saude', 'Lavagem nasal com procedimento'],
+  lavagem_ouvido: ['atividades_procedimentos_saude', 'Lavagem de ouvido'],
+  manutencao_protese: ['atividades_procedimentos_saude', 'Manutenção de prótese'],
+  medicacao_ev_im: ['atividades_procedimentos_saude', 'Medicação EV/IM'],
+  medicacao_ocular: ['atividades_procedimentos_saude', 'Medicação ocular'],
+  medicacao_oral: ['atividades_procedimentos_saude', 'Medicação oral'],
+  medicacao_topica: ['atividades_procedimentos_saude', 'Medicação tópica'],
+  paciente_observacao: ['atividades_procedimentos_saude', 'Paciente em observação'],
+  palestra_higiene_bucal: ['atividades_procedimentos_saude', 'Palestra de higiene bucal'],
+  pequenas_cirurgias: ['atividades_procedimentos_saude', 'Pequenas cirurgias'],
+  prenatal: ['atividades_procedimentos_saude', 'Prenatal'],
+  protese: ['atividades_procedimentos_saude', 'Prótese'],
+  retirada_gesso: ['atividades_procedimentos_saude', 'Retirada de gesso'],
+  teste_aids: ['atividades_procedimentos_saude', 'Teste AIDS'],
+  teste_covid19: ['atividades_procedimentos_saude', 'Teste de Covid-19'],
+  teste_glicemia: ['atividades_procedimentos_saude', 'Teste de glicemia'],
+  teste_gravidez: ['atividades_procedimentos_saude', 'Teste de gravidez'],
+  teste_doppler: ['atividades_procedimentos_saude', 'Teste Doppler'],
+  ultrassonografia: ['atividades_procedimentos_saude', 'Ultrassonografia'],
+  vacinas: ['atividades_procedimentos_saude', 'Vacinas'],
+  visitas_domiciliares: ['atividades_procedimentos_saude', 'Visitas domiciliares'],
+  outras_atividades: ['assistencia_social_doacoes', 'Outras atividades'],
+  aconselhamento: ['assistencia_social_doacoes', 'Aconselhamento'],
+  brinquedos_doados_criancas: ['assistencia_social_doacoes', 'Brinquedos doados para crianças'],
+  cestas_basicas: ['assistencia_social_doacoes', 'Cestas básicas'],
+  corte_cabelo: ['assistencia_social_doacoes', 'Corte de cabelo'],
+  curso_empreendedorismo: ['assistencia_social_doacoes', 'Curso de Empreendedorismo'],
+  doacao_gerador: ['assistencia_social_doacoes', 'Doação de gerador'],
+  doacao_oculos: ['assistencia_social_doacoes', 'Doação de óculos'],
+  kit_lanche: ['assistencia_social_doacoes', 'Kit de lanche'],
+  kit_criancas_escolar: ['assistencia_social_doacoes', 'Kit para crianças/escolar'],
+  kit_mulheres: ['assistencia_social_doacoes', 'Kit para mulheres'],
+  kit_homens: ['assistencia_social_doacoes', 'Kit para homens'],
+  lembrancas: ['assistencia_social_doacoes', 'Lembranças'],
+  orientacao_juridica: ['assistencia_social_doacoes', 'Orientação jurídica'],
+  pintura_casas: ['assistencia_social_doacoes', 'Pintura de casas'],
+  pocos_perfurados: ['assistencia_social_doacoes', 'Poços perfurados'],
+  produtos_cabelo: ['assistencia_social_doacoes', 'Produtos de cabelo'],
+  sacolas_roupas: ['assistencia_social_doacoes', 'Sacolas de roupas'],
+  treinamento_lideranca_local: ['assistencia_social_doacoes', 'Treinamento de liderança local'],
+  curso_gestao_financeira: ['assistencia_social_doacoes', 'Curso de Gestão Financeira'],
+};
+
+// ---------------------------------------------------------------------------
 // Registries (deduplicação em memória, preservando ordem de primeira aparição)
 // ---------------------------------------------------------------------------
 
@@ -633,7 +700,8 @@ if (parceiroRows.length) {
 }
 
 // atendimentos (só para viagens do sistema IPM, que têm métricas)
-const metricDbNames = METRIC_COLUMNS.map(([, dbName]) => dbName);
+// Colunas fixas: exclui os grupos dinâmicos, que viram atendimentos_extra abaixo.
+const metricDbNames = METRIC_COLUMNS.map(([, dbName]) => dbName).filter((dbName) => !DYNAMIC_METRIC_GROUPS[dbName]);
 const atendimentoRows = [];
 viagensSistema.forEach((v) => {
   const values = metricDbNames.map((dbName) => sqlInt(v.metrics[dbName]));
@@ -645,6 +713,34 @@ if (atendimentoRows.length) {
   out.push('-- Atendimentos e atividades (métricas do sistema IPM)');
   out.push(`insert into public.atendimentos (viagem_id, ${metricDbNames.join(', ')}, observacoes) values`);
   out.push(atendimentoRows.join(',\n') + ';');
+  out.push('');
+}
+
+// campos_estatisticos: catálogo dos itens dos grupos dinâmicos (nasce populado com os
+// nomes usados historicamente, para o autocomplete já vir útil).
+const camposEstatisticosRows = Object.values(DYNAMIC_METRIC_GROUPS).map(
+  ([grupo, nome]) => `  (${sqlStr(grupo)}, ${sqlStr(nome)})`,
+);
+out.push('-- Catálogo de itens dos grupos dinâmicos de atendimentos');
+out.push('insert into public.campos_estatisticos (grupo, nome) values');
+out.push(camposEstatisticosRows.join(',\n') + '\non conflict (grupo, nome) do nothing;');
+out.push('');
+
+// atendimentos_extra: quantidade de cada item dos grupos dinâmicos, por viagem do sistema IPM.
+const atendimentosExtraRows = [];
+viagensSistema.forEach((v) => {
+  Object.entries(DYNAMIC_METRIC_GROUPS).forEach(([dbName, [grupo, nome]]) => {
+    const quantidade = v.metrics[dbName];
+    if (quantidade === null || quantidade === undefined || quantidade === 0) return;
+    atendimentosExtraRows.push(
+      `  (${sqlStr(v.id)}, (select id from public.campos_estatisticos where grupo = ${sqlStr(grupo)} and nome = ${sqlStr(nome)}), ${sqlInt(quantidade)})`,
+    );
+  });
+});
+if (atendimentosExtraRows.length) {
+  out.push('-- Itens dos grupos dinâmicos de atendimentos, por viagem');
+  out.push('insert into public.atendimentos_extra (viagem_id, campo_estatistico_id, quantidade) values');
+  out.push(atendimentosExtraRows.join(',\n') + ';');
   out.push('');
 }
 

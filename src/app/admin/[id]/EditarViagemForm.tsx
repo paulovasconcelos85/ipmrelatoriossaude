@@ -3,8 +3,14 @@
 import { useActionState, useEffect, useState, type ChangeEvent } from 'react';
 import { useFormStatus } from 'react-dom';
 import { atualizarViagemIpm } from '../actions';
-import { ATENDIMENTOS_GRUPOS } from '@/lib/atendimentos-fields';
-import { atualizarListaDinamica, atualizarListaVoluntarios, type LinhaVoluntario } from '@/lib/campos-dinamicos';
+import { ATENDIMENTOS_GRUPOS, type ChaveGrupoDinamico } from '@/lib/atendimentos-fields';
+import {
+  atualizarListaDinamica,
+  atualizarListaEstatisticas,
+  atualizarListaVoluntarios,
+  type LinhaEstatistica,
+  type LinhaVoluntario,
+} from '@/lib/campos-dinamicos';
 import type { Lookup, Profissional, ViagemIpm } from '@/lib/viagens-ipm';
 import Combobox from '@/components/Combobox';
 
@@ -32,6 +38,7 @@ export default function EditarViagemForm({
   areas,
   locais,
   funcoesVoluntario,
+  camposEstatisticos,
 }: {
   viagem: ViagemIpm;
   tiposTransporte: Lookup[];
@@ -43,6 +50,7 @@ export default function EditarViagemForm({
   areas: string[];
   locais: string[];
   funcoesVoluntario: string[];
+  camposEstatisticos: Record<string, string[]>;
 }) {
   const [estado, formAction] = useActionState(atualizarViagemIpm, undefined);
 
@@ -98,6 +106,39 @@ export default function EditarViagemForm({
 
   function alterarVoluntario(index: number, campo: keyof LinhaVoluntario, valor: string) {
     setVoluntariosDigitados((atual) => atualizarListaVoluntarios(atual, index, campo, valor));
+  }
+
+  function itensIniciais(chave: ChaveGrupoDinamico): LinhaEstatistica[] {
+    const itens = viagem.atendimentosExtras
+      .filter((item) => item.grupo === chave)
+      .map((item) => ({ nome: item.nome, quantidade: String(item.quantidade) }));
+    return [...itens, { nome: '', quantidade: '' }];
+  }
+
+  const [itensAtividadeSaude, setItensAtividadeSaude] = useState<LinhaEstatistica[]>(() =>
+    itensIniciais('atividades_procedimentos_saude'),
+  );
+  const [itensAssistenciaSocial, setItensAssistenciaSocial] = useState<LinhaEstatistica[]>(() =>
+    itensIniciais('assistencia_social_doacoes'),
+  );
+
+  const itensPorGrupoDinamico: Record<ChaveGrupoDinamico, LinhaEstatistica[]> = {
+    atividades_procedimentos_saude: itensAtividadeSaude,
+    assistencia_social_doacoes: itensAssistenciaSocial,
+  };
+  const setItensPorGrupoDinamico: Record<ChaveGrupoDinamico, (v: LinhaEstatistica[]) => void> = {
+    atividades_procedimentos_saude: setItensAtividadeSaude,
+    assistencia_social_doacoes: setItensAssistenciaSocial,
+  };
+
+  function alterarItemEstatistica(
+    chave: ChaveGrupoDinamico,
+    index: number,
+    campo: keyof LinhaEstatistica,
+    valor: string,
+  ) {
+    const setItens = setItensPorGrupoDinamico[chave];
+    setItens(atualizarListaEstatisticas(itensPorGrupoDinamico[chave], index, campo, valor));
   }
 
   function somarFaixasEtarias(e: ChangeEvent<HTMLDivElement>) {
@@ -342,27 +383,55 @@ export default function EditarViagemForm({
               >
                 {grupo.titulo}
               </summary>
-              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                {grupo.campos.map((campo) => (
-                  <label
-                    key={campo.name}
-                    className={
-                      campo.destaque
-                        ? 'flex flex-col gap-1 rounded-lg bg-blue-100 px-2 py-1.5 text-xs font-bold text-blue-900'
-                        : 'flex flex-col gap-1 text-xs font-semibold text-slate-500'
-                    }
-                  >
-                    {campo.label}
-                    <input
-                      type="number"
-                      name={campo.name}
-                      min={0}
-                      defaultValue={viagem.atendimentos[campo.name] ?? 0}
-                      className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-slate-900"
-                    />
-                  </label>
-                ))}
-              </div>
+              {grupo.dinamico ? (
+                <div className="mt-3 flex flex-col gap-2">
+                  {itensPorGrupoDinamico[grupo.dinamico.chave].map((linha, i) => (
+                    <div key={i} className="flex gap-2">
+                      <Combobox
+                        name={grupo.dinamico!.campoNome}
+                        options={camposEstatisticos[grupo.dinamico!.chave] ?? []}
+                        value={linha.nome}
+                        onValueChange={(v) => alterarItemEstatistica(grupo.dinamico!.chave, i, 'nome', v)}
+                        placeholder={i === 0 ? 'Nome do item (ex.: Curativos)' : 'Adicionar outro item...'}
+                        className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                      />
+                      <input
+                        type="number"
+                        name={grupo.dinamico!.campoQtd}
+                        min={0}
+                        value={linha.quantidade}
+                        onChange={(e) =>
+                          alterarItemEstatistica(grupo.dinamico!.chave, i, 'quantidade', e.target.value)
+                        }
+                        placeholder="Qtd"
+                        className="w-24 rounded-lg border border-slate-300 px-2 py-2 text-sm text-slate-900"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                  {grupo.campos.map((campo) => (
+                    <label
+                      key={campo.name}
+                      className={
+                        campo.destaque
+                          ? 'flex flex-col gap-1 rounded-lg bg-blue-100 px-2 py-1.5 text-xs font-bold text-blue-900'
+                          : 'flex flex-col gap-1 text-xs font-semibold text-slate-500'
+                      }
+                    >
+                      {campo.label}
+                      <input
+                        type="number"
+                        name={campo.name}
+                        min={0}
+                        defaultValue={viagem.atendimentos[campo.name] ?? 0}
+                        className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm text-slate-900"
+                      />
+                    </label>
+                  ))}
+                </div>
+              )}
             </details>
           ))}
         </div>

@@ -55,10 +55,10 @@ export default function DetalhesViagem({ viagem }: { viagem: ViagemIpm }) {
             <dd className="break-words">{viagem.lideres_saude.join(', ')}</dd>
           </div>
         )}
-        {viagem.parceiros.length > 0 && (
+        {viagem.parceirosComLocal.length > 0 && (
           <div className="flex flex-col sm:col-span-2">
             <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Parceiros</dt>
-            <dd className="break-words">{viagem.parceiros.join(', ')}</dd>
+            <dd className="break-words">{viagem.parceirosComLocal.join(', ')}</dd>
           </div>
         )}
       </dl>

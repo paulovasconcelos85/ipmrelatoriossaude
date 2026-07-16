@@ -31,8 +31,8 @@ export default function ViagemCardAdmin({ viagem, numero }: { viagem: ViagemIpm;
           <p className="text-sm text-slate-500">
             {viagem.coordenadores.length > 0 ? `Coordenador(es): ${viagem.coordenadores.join(', ')}` : 'Sem coordenador'}
           </p>
-          {viagem.parceiros.length > 0 && (
-            <p className="text-sm text-slate-500">Parceiros: {viagem.parceiros.join(', ')}</p>
+          {viagem.parceirosComLocal.length > 0 && (
+            <p className="text-sm text-slate-500">Parceiros: {viagem.parceirosComLocal.join(', ')}</p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-3">
