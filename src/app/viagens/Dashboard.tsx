@@ -234,23 +234,18 @@ export default function Dashboard({ viagens }: { viagens: ViagemIpm[] }) {
     const soma = (campo: string) => filtradas.reduce((acc, v) => acc + (v.atendimentos[campo] ?? 0), 0);
     return {
       totalViagens: filtradas.length,
-      canceladas: filtradas.filter((v) => v.cancelada).length,
       totalDias: filtradas.reduce((acc, v) => acc + (v.dias_missao ?? 0), 0),
       medicos: soma('atendimentos_medicos'),
       odonto: soma('atendimentos_odontologicos'),
       enfermagem: soma('atendimentos_enfermagem'),
-      evangelismo: soma('atividades_evangelisticas'),
       decisoes: soma('decisoes_por_cristo'),
       batismos: soma('batismos'),
-      vacinas: soma('vacinas'),
       comunidades: new Set(filtradas.flatMap((v) => v.comunidades)).size,
       parceirosEnvolvidos: new Set(filtradas.flatMap((v) => v.parceiros)).size,
       barcosUsados: new Set(filtradas.map((v) => v.barco).filter((b): b is string => Boolean(b))).size,
       voluntarios: new Set(filtradas.flatMap((v) => v.voluntarios.map((vol) => vol.nome))).size,
     };
   }, [filtradas]);
-
-  const totalAtendimentos = stats.medicos + stats.odonto + stats.enfermagem;
 
   const filtrosAtivos: [string, string][] = [
     ['Ano', ano],
@@ -264,7 +259,6 @@ export default function Dashboard({ viagens }: { viagens: ViagemIpm[] }) {
 
   const linhasStats: LinhaStat[] = [
     { label: 'Viagens', valor: stats.totalViagens, destaque: true },
-    { label: 'Total de atendimentos', valor: totalAtendimentos, destaque: true },
     { label: 'Atendimentos médicos', valor: stats.medicos },
     { label: 'Atendimentos odontológicos', valor: stats.odonto },
     { label: 'Atendimentos de enfermagem', valor: stats.enfermagem },
@@ -273,11 +267,8 @@ export default function Dashboard({ viagens }: { viagens: ViagemIpm[] }) {
     { label: 'Voluntários envolvidos', valor: stats.voluntarios },
     { label: 'Barcos utilizados', valor: stats.barcosUsados },
     { label: 'Dias em missão', valor: stats.totalDias },
-    { label: 'Atividades evangelísticas', valor: stats.evangelismo },
     { label: 'Decisões por Cristo', valor: stats.decisoes },
     { label: 'Batismos', valor: stats.batismos },
-    { label: 'Vacinas aplicadas', valor: stats.vacinas },
-    { label: 'Viagens canceladas', valor: stats.canceladas },
   ];
 
   return (
@@ -316,7 +307,6 @@ export default function Dashboard({ viagens }: { viagens: ViagemIpm[] }) {
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             <StatTile label="Viagens" valor={stats.totalViagens} destaque />
-            <StatTile label="Total de atendimentos" valor={totalAtendimentos} destaque />
             <StatTile label="Atendimentos médicos" valor={stats.medicos} />
             <StatTile label="Atendimentos odontológicos" valor={stats.odonto} />
             <StatTile label="Atendimentos de enfermagem" valor={stats.enfermagem} />
@@ -325,11 +315,8 @@ export default function Dashboard({ viagens }: { viagens: ViagemIpm[] }) {
             <StatTile label="Voluntários envolvidos" valor={stats.voluntarios} />
             <StatTile label="Barcos utilizados" valor={stats.barcosUsados} />
             <StatTile label="Dias em missão" valor={stats.totalDias} />
-            <StatTile label="Atividades evangelísticas" valor={stats.evangelismo} />
             <StatTile label="Decisões por Cristo" valor={stats.decisoes} />
             <StatTile label="Batismos" valor={stats.batismos} />
-            <StatTile label="Vacinas aplicadas" valor={stats.vacinas} />
-            <StatTile label="Viagens canceladas" valor={stats.canceladas} />
           </div>
 
           <div className="mt-5 flex justify-end">

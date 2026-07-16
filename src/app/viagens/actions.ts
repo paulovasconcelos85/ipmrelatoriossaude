@@ -210,5 +210,6 @@ export async function criarViagemIpm(
   }
 
   revalidatePath('/viagens');
-  redirect('/viagens');
+  revalidatePath('/');
+  redirect('/');
 }
