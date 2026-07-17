@@ -30,19 +30,19 @@ export default function CompartilharWhatsapp({ viagem }: { viagem: ViagemIpm }) 
         <button
           type="button"
           onClick={abrirWhatsapp}
-          className="self-start rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all duration-150 hover:bg-emerald-700 active:scale-95"
+          className="self-start rounded-full bg-emerald-600 px-4 py-2.5 text-base font-bold text-white shadow-sm transition-all duration-150 hover:bg-emerald-700 active:scale-95"
         >
           Compartilhar no WhatsApp
         </button>
         <button
           type="button"
           onClick={copiarTexto}
-          className="self-start rounded-full border-2 border-emerald-600 px-4 py-2 text-sm font-bold text-emerald-700 transition-all duration-150 hover:bg-emerald-50 active:scale-95"
+          className="self-start rounded-full border-2 border-emerald-600 px-4 py-2.5 text-base font-bold text-emerald-700 transition-all duration-150 hover:bg-emerald-50 active:scale-95"
         >
           {copiado ? 'Copiado!' : 'Copiar texto'}
         </button>
       </div>
-      {erro && <p className="text-sm font-semibold text-red-600">{erro}</p>}
+      {erro && <p className="text-base font-semibold text-red-600">{erro}</p>}
     </div>
   );
 }

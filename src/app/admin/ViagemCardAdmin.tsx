@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import CompartilharWhatsapp from '@/components/CompartilharWhatsapp';
 import DetalhesViagem from '@/components/DetalhesViagem';
 import RelatorioPdfViagem from '@/components/RelatorioPdfViagem';
 import { formatarPeriodo } from '@/lib/format';
@@ -61,6 +62,7 @@ export default function ViagemCardAdmin({ viagem, numero }: { viagem: ViagemIpm;
           Editar
         </Link>
         <RelatorioPdfViagem viagem={viagem} />
+        <CompartilharWhatsapp viagem={viagem} />
         <ExcluirViagemButton id={viagem.id} />
       </div>
     </div>
