@@ -34,20 +34,20 @@ export default function RelatorioPdfViagem({ viagem }: { viagem: ViagemIpm }) {
           type="button"
           disabled={gerando !== null}
           onClick={() => emitir('pdf')}
-          className="self-start rounded-full bg-blue-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all duration-150 hover:bg-blue-800 active:scale-95 disabled:opacity-60"
+          className="self-start rounded-full border-2 border-slate-300 px-4 py-2.5 text-base font-semibold text-slate-600 transition-all duration-150 hover:bg-slate-50 active:scale-95 disabled:opacity-60"
         >
-          {gerando === 'pdf' ? 'Gerando...' : 'Emitir relatório em PDF'}
+          {gerando === 'pdf' ? 'Gerando...' : 'Relatório em PDF'}
         </button>
         <button
           type="button"
           disabled={gerando !== null}
           onClick={() => emitir('docx')}
-          className="self-start rounded-full border-2 border-blue-900 px-4 py-2 text-sm font-bold text-blue-900 transition-all duration-150 hover:bg-blue-50 active:scale-95 disabled:opacity-60"
+          className="self-start rounded-full border-2 border-slate-300 px-4 py-2.5 text-base font-semibold text-slate-600 transition-all duration-150 hover:bg-slate-50 active:scale-95 disabled:opacity-60"
         >
-          {gerando === 'docx' ? 'Gerando...' : 'Emitir relatório em Word'}
+          {gerando === 'docx' ? 'Gerando...' : 'Relatório em Word'}
         </button>
       </div>
-      {erro && <p className="text-sm font-semibold text-red-600">{erro}</p>}
+      {erro && <p className="text-base font-semibold text-red-600">{erro}</p>}
     </div>
   );
 }

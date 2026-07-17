@@ -10,12 +10,12 @@ function aplicarTamanho(indice: number) {
 }
 
 export default function FontSizeControl() {
-  const [indice, setIndice] = useState(0);
+  const [indice, setIndice] = useState(1);
 
   useEffect(() => {
     const salvo = window.localStorage.getItem(STORAGE_KEY);
     const indiceSalvo = salvo ? PASSOS.indexOf(Number(salvo)) : -1;
-    const inicial = indiceSalvo >= 0 ? indiceSalvo : 0;
+    const inicial = indiceSalvo >= 0 ? indiceSalvo : 1;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza com localStorage apenas na montagem
     setIndice(inicial);
     aplicarTamanho(inicial);
@@ -41,7 +41,7 @@ export default function FontSizeControl() {
       </button>
       <button
         type="button"
-        onClick={() => mudar(0)}
+        onClick={() => mudar(1)}
         aria-label="Tamanho de letra padrão"
         className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-white/10 text-base font-bold text-white active:bg-white/30"
       >

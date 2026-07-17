@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import FontSizeControl from '@/components/FontSizeControl';
 import { listViagensIpm, type ViagemIpm } from '@/lib/viagens-ipm';
 import ViagemCardAdmin from './admin/ViagemCardAdmin';
 import { logoutAdmin } from './logout-action';
@@ -39,34 +40,35 @@ export default async function AdminViagens() {
             <h1 className="text-xl font-extrabold leading-tight text-white sm:text-2xl">
               Administração de viagens
             </h1>
-            <div className="flex items-center gap-4">
-              <Link href="/calendario" className="text-sm font-semibold text-blue-100 underline underline-offset-2">
-                Calendário
-              </Link>
-              <Link href="/viagens" className="text-sm font-semibold text-blue-100 underline underline-offset-2">
-                Ver lista pública
-              </Link>
-              <Link
-                href="/admin/cadastros"
+            <FontSizeControl />
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <Link href="/calendario" className="text-sm font-semibold text-blue-100 underline underline-offset-2">
+              Calendário
+            </Link>
+            <Link href="/viagens" className="text-sm font-semibold text-blue-100 underline underline-offset-2">
+              Ver lista pública
+            </Link>
+            <Link
+              href="/admin/cadastros"
+              className="text-sm font-semibold text-blue-100 underline underline-offset-2"
+            >
+              Cadastros
+            </Link>
+            <Link
+              href="/viagens/nova"
+              className="rounded-full bg-white px-4 py-2 text-sm font-bold text-blue-900 shadow-sm transition-all duration-150 hover:bg-blue-50 active:scale-95"
+            >
+              + Nova viagem
+            </Link>
+            <form action={logoutAdmin}>
+              <button
+                type="submit"
                 className="text-sm font-semibold text-blue-100 underline underline-offset-2"
               >
-                Cadastros
-              </Link>
-              <Link
-                href="/viagens/nova"
-                className="rounded-full bg-white px-4 py-2 text-sm font-bold text-blue-900 shadow-sm transition-all duration-150 hover:bg-blue-50 active:scale-95"
-              >
-                + Nova viagem
-              </Link>
-              <form action={logoutAdmin}>
-                <button
-                  type="submit"
-                  className="text-sm font-semibold text-blue-100 underline underline-offset-2"
-                >
-                  Sair
-                </button>
-              </form>
-            </div>
+                Sair
+              </button>
+            </form>
           </div>
           <p className="text-sm text-blue-100">{viagens.length} viagens registradas</p>
         </div>
