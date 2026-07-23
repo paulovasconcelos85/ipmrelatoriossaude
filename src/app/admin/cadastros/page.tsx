@@ -23,10 +23,10 @@ export default async function CadastrosAdmin() {
 
   return (
     <>
-      <header className="sticky top-0 z-10 bg-blue-900 px-4 py-4 shadow-md sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-10 bg-primary-900 px-4 py-4 shadow-md sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl font-extrabold leading-tight text-white sm:text-2xl">Cadastros</h1>
-          <Link href="/" className="text-sm font-semibold text-blue-100 underline underline-offset-2">
+          <Link href="/" className="text-sm font-semibold text-primary-100 underline underline-offset-2">
             ← Voltar para viagens
           </Link>
         </div>

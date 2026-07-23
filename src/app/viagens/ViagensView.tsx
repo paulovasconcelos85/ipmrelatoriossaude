@@ -32,7 +32,7 @@ function ViagemCard({
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
             {viagem.numero && (
-              <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-900">
+              <span className="rounded-full bg-primary-100 px-2.5 py-0.5 text-xs font-bold text-primary-900">
                 Nº {viagem.numero}
               </span>
             )}
@@ -42,7 +42,7 @@ function ViagemCard({
               </span>
             )}
           </div>
-          <p className="break-words text-lg font-bold leading-snug text-blue-900">{tituloViagem(viagem)}</p>
+          <p className="break-words text-lg font-bold leading-snug text-primary-900">{tituloViagem(viagem)}</p>
           <p className="break-words text-sm text-slate-500">
             {formatarPeriodo(viagem.data_saida, viagem.data_chegada)}
             {viagem.tipo_missao && ` · ${viagem.tipo_missao}`}
@@ -167,14 +167,14 @@ export default function ViagensView({ viagens }: { viagens: ViagemIpm[] }) {
           <button
             type="button"
             onClick={() => setModo('cards')}
-            className={`rounded-full px-4 py-1.5 ${modo === 'cards' ? 'bg-blue-900 text-white' : 'text-slate-600'}`}
+            className={`rounded-full px-4 py-1.5 ${modo === 'cards' ? 'bg-primary-900 text-white' : 'text-slate-600'}`}
           >
             Cards
           </button>
           <button
             type="button"
             onClick={() => setModo('tabela')}
-            className={`rounded-full px-4 py-1.5 ${modo === 'tabela' ? 'bg-blue-900 text-white' : 'text-slate-600'}`}
+            className={`rounded-full px-4 py-1.5 ${modo === 'tabela' ? 'bg-primary-900 text-white' : 'text-slate-600'}`}
           >
             Tabela
           </button>

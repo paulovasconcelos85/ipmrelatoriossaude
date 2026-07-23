@@ -94,15 +94,15 @@ export default function DetalhesViagem({ viagem }: { viagem: ViagemIpm }) {
                   <li
                     key={c.label}
                     className={`flex flex-col rounded-lg px-2.5 py-1.5 ${
-                      c.destaque ? 'bg-blue-50 ring-1 ring-inset ring-blue-200' : 'bg-slate-50'
+                      c.destaque ? 'bg-primary-50 ring-1 ring-inset ring-primary-200' : 'bg-slate-50'
                     }`}
                   >
-                    <span className={`break-words text-xs ${c.destaque ? 'font-semibold text-blue-700' : 'text-slate-500'}`}>
+                    <span className={`break-words text-xs ${c.destaque ? 'font-semibold text-primary-700' : 'text-slate-500'}`}>
                       {c.label}
                     </span>
                     <span
                       className={`tabular-nums ${
-                        c.destaque ? 'text-lg font-extrabold text-blue-900' : 'text-base font-semibold text-slate-900'
+                        c.destaque ? 'text-lg font-extrabold text-primary-900' : 'text-base font-semibold text-slate-900'
                       }`}
                     >
                       {c.valor}

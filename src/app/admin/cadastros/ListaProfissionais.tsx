@@ -12,7 +12,7 @@ function BotaoSalvar({ texto }: { texto: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-full bg-blue-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all duration-150 hover:bg-blue-800 active:scale-95 disabled:opacity-60 disabled:active:scale-100"
+      className="rounded-full bg-accent-500 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all duration-150 hover:bg-accent-600 active:scale-95 disabled:opacity-60 disabled:active:scale-100"
     >
       {pending ? 'Salvando...' : texto}
     </button>
@@ -73,7 +73,7 @@ export default function ListaProfissionais({ itens }: { itens: Profissional[] })
 
   return (
     <section className="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="mb-4 text-lg font-bold text-blue-900">Pessoas (coordenadores, líderes, equipe)</h2>
+      <h2 className="mb-4 text-lg font-bold text-primary-900">Pessoas (coordenadores, líderes, equipe)</h2>
 
       <ul className="mb-4 flex flex-col">
         {itens.length === 0 && <li className="py-2 text-sm text-slate-400">Nenhum registro ainda.</li>}

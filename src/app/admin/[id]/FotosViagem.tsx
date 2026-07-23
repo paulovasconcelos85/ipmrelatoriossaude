@@ -94,7 +94,7 @@ function CampoFoto({ inputRef }: { inputRef: React.RefObject<HTMLInputElement | 
           if (imagens.length > 0) adicionarArquivos(imagens);
         }}
         className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-3 py-4 text-center text-xs font-normal transition-colors ${
-          arrastando ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-300 text-slate-500'
+          arrastando ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-slate-300 text-slate-500'
         }`}
       >
         {arquivos.length > 0 ? (
@@ -146,7 +146,7 @@ function BotaoEnviar() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-full bg-blue-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all duration-150 hover:bg-blue-800 active:scale-95 disabled:opacity-60"
+      className="rounded-full bg-accent-500 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all duration-150 hover:bg-accent-600 active:scale-95 disabled:opacity-60"
     >
       {pending ? 'Enviando...' : 'Adicionar fotos'}
     </button>
@@ -188,7 +188,7 @@ function LegendaFoto({ viagemId, foto }: { viagemId: string; foto: Foto }) {
           type="button"
           disabled={pending}
           onClick={salvar}
-          className="self-start rounded-full bg-blue-900 px-3 py-1 text-xs font-bold text-white disabled:opacity-60"
+          className="self-start rounded-full bg-accent-500 px-3 py-1 text-xs font-bold text-white disabled:opacity-60 hover:bg-accent-600"
         >
           {pending ? 'Salvando...' : 'Salvar legenda'}
         </button>
@@ -232,7 +232,7 @@ export default function FotosViagem({ viagemId, fotos }: { viagemId: string; fot
 
   return (
     <section className="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="mb-1 text-lg font-bold text-blue-900">Fotos</h2>
+      <h2 className="mb-1 text-lg font-bold text-primary-900">Fotos</h2>
       <p className="mb-4 text-sm text-slate-500">
         Fotos anexadas serão usadas no relatório em PDF da viagem.
       </p>

@@ -24,7 +24,7 @@ import { formatarDataPorExtenso, formatarPeriodo } from '@/lib/format';
 import {
   ASSINATURAS_RELATORIO,
   ehViagemAmazon,
-  montarParagrafoAbertura,
+  montarParagrafosRelatorio,
   VERSICULO_REFERENCIA,
   VERSICULO_TEXTO,
 } from '@/lib/relatorio-texto';
@@ -104,40 +104,6 @@ function textoNormal(texto: string, size = 20, color = COR_SLATE_900) {
   return new TextRun({ text: texto, size, color });
 }
 
-function tituloSecao(texto: string): Paragraph {
-  return new Paragraph({
-    children: [new TextRun({ text: texto, bold: true, size: 22, color: COR_SLATE_900 })],
-    spacing: { before: 200, after: 120 },
-  });
-}
-
-/** Tabela sem bordas para pares label/valor (Dados da viagem), como no PDF. */
-function tabelaLabelValor(linhas: [string, string][]): Table {
-  const larguraLabel = convertMillimetersToTwip(42);
-  return new Table({
-    width: { size: LARGURA_UTIL_TWIPS, type: WidthType.DXA },
-    columnWidths: [larguraLabel, LARGURA_UTIL_TWIPS - larguraLabel],
-    borders: BORDAS_TABELA_INVISIVEL,
-    rows: linhas.map(
-      ([label, valor]) =>
-        new TableRow({
-          cantSplit: true,
-          children: [
-            new TableCell({
-              width: { size: larguraLabel, type: WidthType.DXA },
-              margins: MARGEM_CELULA,
-              children: [new Paragraph({ children: [textoNormal(label, 18, COR_SLATE_500)] })],
-            }),
-            new TableCell({
-              margins: MARGEM_CELULA,
-              children: [new Paragraph({ children: [textoNormal(valor)] })],
-            }),
-          ],
-        }),
-    ),
-  });
-}
-
 /** Caixa com fundo cinza (parágrafo dentro de uma tabela de 1 célula, para simular um bloco destacado). */
 function caixaDestaque(texto: string, corFundo: string, corTexto: string): Table {
   return new Table({
@@ -211,7 +177,7 @@ function montarSecaoAtendimentos(viagem: ViagemIpm): (Paragraph | Table)[] {
   const blocos: (Paragraph | Table)[] = [
     new Paragraph({
       pageBreakBefore: true,
-      children: [new TextRun({ text: 'Atendimentos', bold: true, size: 22, color: COR_SLATE_900 })],
+      children: [new TextRun({ text: 'Anexo I — Atendimentos', bold: true, size: 22, color: COR_SLATE_900 })],
       spacing: { after: 160 },
     }),
   ];
@@ -367,7 +333,7 @@ async function montarSecaoFotos(viagem: ViagemIpm): Promise<(Paragraph | Table)[
   return [
     new Paragraph({
       pageBreakBefore: true,
-      children: [new TextRun({ text: 'Anexo — Fotos', bold: true, size: 22, color: COR_SLATE_900 })],
+      children: [new TextRun({ text: 'Anexo II — Fotos', bold: true, size: 22, color: COR_SLATE_900 })],
       spacing: { after: 160 },
     }),
     new Table({
@@ -387,16 +353,6 @@ export async function gerarRelatorioDocx(viagem: ViagemIpm): Promise<void> {
   const periodo = formatarPeriodo(viagem.data_saida, viagem.data_chegada);
   const subtitulo = [numero, `${periodo}${viagem.ano ? ` de ${viagem.ano}` : ''}`].filter(Boolean).join(' · ');
 
-  const dados: [string, string][] = [];
-  if (viagem.area) dados.push(['Área', viagem.area]);
-  if (viagem.local) dados.push(['Local', viagem.local]);
-  if (viagem.comunidades.length > 0) dados.push(['Comunidades visitadas', viagem.comunidades.join(', ')]);
-  if (viagem.dias_missao != null) dados.push(['Dias em missão', String(viagem.dias_missao)]);
-  if (viagem.tipo_transporte) dados.push(['Transporte', viagem.tipo_transporte]);
-  if (viagem.coordenadores.length > 0) dados.push(['Coordenador(es)', viagem.coordenadores.join(', ')]);
-  if (viagem.lideres_saude.length > 0) dados.push(['Líder(es) de saúde', viagem.lideres_saude.join(', ')]);
-  if (viagem.parceirosComLocal.length > 0) dados.push(['Parceiros', viagem.parceirosComLocal.join(', ')]);
-
   const corpo: (Paragraph | Table)[] = [
     new Paragraph({
       children: [new TextRun({ text: 'Relatório de Viagem Missionária', bold: true, size: 30, color: COR_AZUL_900 })],
@@ -406,41 +362,33 @@ export async function gerarRelatorioDocx(viagem: ViagemIpm): Promise<void> {
       children: [textoNormal(subtitulo, 20, COR_SLATE_500)],
       spacing: { after: 200 },
     }),
-    new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
-      children: [textoNormal(montarParagrafoAbertura(viagem))],
-      spacing: { after: 200 },
-    }),
-    tituloSecao('Dados da viagem'),
-    tabelaLabelValor(dados),
   ];
 
-  if (viagem.observacoes) {
-    corpo.push(new Paragraph({ spacing: { after: 120 } }), caixaDestaque(viagem.observacoes, COR_SLATE_50, COR_SLATE_500));
-  }
-
-  corpo.push(tituloSecao('Voluntários'));
-  if (viagem.voluntarios.length > 0) {
-    for (const v of viagem.voluntarios) {
-      const texto = [v.nome, v.funcao ? `(${v.funcao})` : null, v.observacao ? `— ${v.observacao}` : null]
-        .filter(Boolean)
-        .join(' ');
-      corpo.push(new Paragraph({ children: [textoNormal(texto, 19)], spacing: { after: 40 } }));
-    }
-  } else {
+  // Corpo do relatório: parágrafos corridos (abertura, liderança, equipe, atividades e remissão
+  // aos anexos), nos moldes dos relatórios em Word usados até hoje — sem tabelas nem listas.
+  for (const paragrafo of montarParagrafosRelatorio(viagem)) {
     corpo.push(
-      new Paragraph({ children: [new TextRun({ text: 'Ainda não registrados', italics: true, size: 19, color: COR_SLATE_400 })] }),
+      new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
+        children: [textoNormal(paragrafo)],
+        spacing: { after: 200 },
+      }),
     );
   }
 
-  // Versículo + assinaturas: parágrafos encadeados com keepNext para nunca serem separados
-  // por uma quebra de página (ex.: o nome da Gestora ficar sozinho numa página nova).
+  if (viagem.observacoes) {
+    corpo.push(caixaDestaque(viagem.observacoes, COR_SLATE_50, COR_SLATE_500), new Paragraph({ spacing: { after: 120 } }));
+  }
+
+  // Versículo de encerramento + assinaturas: parágrafos encadeados com keepNext para nunca
+  // serem separados por uma quebra de página (ex.: o nome da Gestora ficar sozinho numa página
+  // nova). Ficam na página 1 — os anexos (Atendimentos e Fotos) não levam assinatura.
   corpo.push(
     new Paragraph({
       keepNext: true,
       keepLines: true,
       alignment: AlignmentType.CENTER,
-      spacing: { before: 200, after: 40 },
+      spacing: { before: 80, after: 40 },
       children: [new TextRun({ text: VERSICULO_TEXTO, italics: true, size: 21, color: COR_AZUL_700 })],
     }),
     new Paragraph({

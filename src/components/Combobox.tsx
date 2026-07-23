@@ -125,7 +125,7 @@ export default function Combobox({
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => selecionar(opcao)}
               className={`block w-full px-3 py-2 text-left ${
-                i === indiceAtivo ? 'bg-blue-50 text-blue-900' : 'text-slate-700 hover:bg-slate-50'
+                i === indiceAtivo ? 'bg-primary-50 text-primary-900' : 'text-slate-700 hover:bg-slate-50'
               }`}
             >
               {opcao}

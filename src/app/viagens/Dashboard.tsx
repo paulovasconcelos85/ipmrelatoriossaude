@@ -175,11 +175,11 @@ function StatTile({ label, valor, destaque }: { label: string; valor: number; de
   return (
     <div
       className={`flex flex-col gap-1 rounded-xl px-3 py-3 ${
-        destaque ? 'bg-blue-50 ring-1 ring-inset ring-blue-200' : 'bg-slate-50'
+        destaque ? 'bg-primary-50 ring-1 ring-inset ring-primary-200' : 'bg-slate-50'
       }`}
     >
-      <span className={`text-xs font-medium ${destaque ? 'text-blue-700' : 'text-slate-500'}`}>{label}</span>
-      <span className={`text-2xl font-semibold ${destaque ? 'text-blue-900' : 'text-slate-900'}`}>
+      <span className={`text-xs font-medium ${destaque ? 'text-primary-700' : 'text-slate-500'}`}>{label}</span>
+      <span className={`text-2xl font-semibold ${destaque ? 'text-primary-900' : 'text-slate-900'}`}>
         {valor.toLocaleString('pt-BR')}
       </span>
     </div>
@@ -280,7 +280,7 @@ export default function Dashboard({ viagens }: { viagens: ViagemIpm[] }) {
         className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
       >
         <div>
-          <p className="text-lg font-bold text-blue-900">Estatísticas</p>
+          <p className="text-lg font-bold text-primary-900">Estatísticas</p>
           <p className="text-sm text-slate-500">{filtradas.length} viagens no filtro atual</p>
         </div>
         <span className="shrink-0 text-xl text-slate-400" aria-hidden>
@@ -323,7 +323,7 @@ export default function Dashboard({ viagens }: { viagens: ViagemIpm[] }) {
             <button
               type="button"
               onClick={() => abrirPdfEstatisticas(filtrosAtivos, linhasStats)}
-              className="rounded-full bg-blue-900 px-4 py-2 text-sm font-bold text-white shadow-sm"
+              className="rounded-full bg-accent-500 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-accent-600"
             >
               Emitir PDF
             </button>

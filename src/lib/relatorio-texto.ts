@@ -40,11 +40,96 @@ export function montarParagrafoAbertura(viagem: ViagemIpm): string {
   }
   if (viagem.barco) {
     clausulas.push(`no barco "${viagem.barco}"`);
+  } else if (viagem.tipo_transporte) {
+    clausulas.push(`por ${viagem.tipo_transporte}`);
+  }
+  const local = [viagem.local, viagem.area].filter(Boolean).join(', ');
+  if (local) {
+    clausulas.push(`em ${local}`);
   }
   const periodo = formatarPeriodo(viagem.data_saida, viagem.data_chegada);
   clausulas.push(`nos dias ${periodo}${viagem.ano ? ` de ${viagem.ano}` : ''}`);
 
-  return `${texto}, ${clausulas.join(', ')}.`;
+  let paragrafo = `${texto}, ${clausulas.join(', ')}.`;
+
+  if (viagem.comunidades.length > 0) {
+    paragrafo += ` Foram atendidas as comunidades de ${juntarComE(viagem.comunidades)}.`;
+  }
+
+  return paragrafo;
+}
+
+/** Parágrafo sobre a liderança da equipe de saúde (segundo parágrafo, nos moldes dos relatórios em Word). */
+export function montarParagrafoLideranca(viagem: ViagemIpm): string | null {
+  if (viagem.lideres_saude.length === 0) return null;
+  return `A liderança da equipe de saúde ficou a cargo de ${juntarComE(viagem.lideres_saude)}, da Igreja Presbiteriana de Manaus.`;
+}
+
+/** Parágrafo com a equipe de voluntários, agrupada por função (ex.: "Fulano, médica; Beltrano e Sicrano, dentistas"). */
+export function montarParagrafoEquipe(viagem: ViagemIpm): string | null {
+  if (viagem.voluntarios.length === 0) return null;
+
+  const semFuncao: string[] = [];
+  const porFuncao = new Map<string, string[]>();
+  for (const v of viagem.voluntarios) {
+    const nome = v.observacao ? `${v.nome} (${v.observacao})` : v.nome;
+    if (!v.funcao) {
+      semFuncao.push(nome);
+      continue;
+    }
+    const lista = porFuncao.get(v.funcao) ?? [];
+    lista.push(nome);
+    porFuncao.set(v.funcao, lista);
+  }
+
+  const partes = [...porFuncao.entries()].map(([funcao, nomes]) => `${juntarComE(nomes)}, ${funcao}`);
+  if (semFuncao.length > 0) partes.push(juntarComE(semFuncao));
+
+  return `Houve a participação dos seguintes voluntários: ${partes.join('; ')}.`;
+}
+
+/** Parágrafo com o total de atendimentos e as demais atividades realizadas (evangelismo, doações etc.). */
+export function montarParagrafoAtividades(viagem: ViagemIpm): string | null {
+  const grupos = gruposAtendimentoComValores(viagem);
+  if (grupos.length === 0) return null;
+
+  const GRUPOS_SAUDE = ['Atendimento médico', 'Atendimento odontológico', 'Atendimento de enfermagem'];
+
+  const totalAtendimentos = grupos
+    .flatMap((g) => g.campos)
+    .filter((c) => c.destaque)
+    .reduce((soma, c) => soma + (typeof c.valor === 'number' ? c.valor : 0), 0);
+
+  const outrasAtividades = grupos
+    .filter((g) => !GRUPOS_SAUDE.includes(g.titulo))
+    .flatMap((g) => g.campos)
+    .map((c) => c.label.toLowerCase());
+
+  const partes: string[] = [];
+  if (totalAtendimentos > 0) {
+    partes.push(`sendo realizados ${totalAtendimentos} atendimentos de saúde`);
+  }
+  if (outrasAtividades.length > 0) {
+    partes.push(`outras atividades foram realizadas pelos demais voluntários presentes: ${outrasAtividades.join(', ')}`);
+  }
+  if (partes.length === 0) return null;
+
+  const texto = `O objetivo desta viagem foi realizar atendimentos de saúde à população local, ${partes.join(', e ')}.`;
+  return texto;
+}
+
+/** Parágrafo final de remissão aos anexos (estatística e fotos), como nos relatórios em Word. */
+export const PARAGRAFO_ANEXOS = 'Todas as atividades estão registradas no Anexo I. No Anexo II, constam fotos da viagem.';
+
+/** Monta os parágrafos do corpo do relatório (abertura, liderança, equipe, atividades e remissão aos anexos). */
+export function montarParagrafosRelatorio(viagem: ViagemIpm): string[] {
+  return [
+    montarParagrafoAbertura(viagem),
+    montarParagrafoLideranca(viagem),
+    montarParagrafoEquipe(viagem),
+    montarParagrafoAtividades(viagem),
+    PARAGRAFO_ANEXOS,
+  ].filter((p): p is string => Boolean(p));
 }
 
 /**

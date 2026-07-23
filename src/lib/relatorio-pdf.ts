@@ -5,7 +5,7 @@ import { formatarDataPorExtenso, formatarPeriodo } from '@/lib/format';
 import {
   ASSINATURAS_RELATORIO,
   ehViagemAmazon,
-  montarParagrafoAbertura,
+  montarParagrafosRelatorio,
   VERSICULO_REFERENCIA,
   VERSICULO_TEXTO,
 } from '@/lib/relatorio-texto';
@@ -145,42 +145,18 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
   doc.text(subtitulo, MARGEM, y);
   y += 10;
 
-  const paragrafoAbertura = doc.splitTextToSize(montarParagrafoAbertura(viagem), LARGURA_UTIL);
-  doc.setFont('PublicSans', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(...COR_SLATE_900);
-  doc.text(paragrafoAbertura, MARGEM, y, { align: 'justify', maxWidth: LARGURA_UTIL });
-  y += paragrafoAbertura.length * 5 + 4;
-
-  // Dados da viagem (pares label/valor, mesmos campos de DetalhesViagem.tsx).
-  const dados: [string, string][] = [];
-  if (viagem.area) dados.push(['Área', viagem.area]);
-  if (viagem.local) dados.push(['Local', viagem.local]);
-  if (viagem.comunidades.length > 0) dados.push(['Comunidades visitadas', viagem.comunidades.join(', ')]);
-  if (viagem.dias_missao != null) dados.push(['Dias em missão', String(viagem.dias_missao)]);
-  if (viagem.tipo_transporte) dados.push(['Transporte', viagem.tipo_transporte]);
-  if (viagem.coordenadores.length > 0) dados.push(['Coordenador(es)', viagem.coordenadores.join(', ')]);
-  if (viagem.lideres_saude.length > 0) dados.push(['Líder(es) de saúde', viagem.lideres_saude.join(', ')]);
-  if (viagem.parceirosComLocal.length > 0) dados.push(['Parceiros', viagem.parceirosComLocal.join(', ')]);
-
-  y = desenharTituloSecao(doc, 'Dados da viagem', y);
-  for (const [label, valor] of dados) {
-    const linhasValor = doc.splitTextToSize(valor, LARGURA_UTIL - 45);
-    const altura = Math.max(5, linhasValor.length * 4.5);
+  // Corpo do relatório: parágrafos corridos (abertura, liderança, equipe, atividades e remissão
+  // aos anexos), nos moldes dos relatórios em Word usados até hoje — sem tabelas nem listas.
+  for (const paragrafo of montarParagrafosRelatorio(viagem)) {
+    const linhas = doc.splitTextToSize(paragrafo, LARGURA_UTIL);
+    const altura = linhas.length * 5;
     y = novaPaginaSeNecessario(doc, y, altura);
-
-    doc.setFont('PublicSans', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(...COR_SLATE_500);
-    doc.text(label, MARGEM, y);
-
     doc.setFont('PublicSans', 'normal');
     doc.setFontSize(10);
     doc.setTextColor(...COR_SLATE_900);
-    doc.text(linhasValor, MARGEM + 42, y);
-    y += altura + 1.5;
+    doc.text(linhas, MARGEM, y, { align: 'justify', maxWidth: LARGURA_UTIL });
+    y += altura + 4;
   }
-  y += 3;
 
   // Observações
   if (viagem.observacoes) {
@@ -197,35 +173,9 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
     y += alturaCaixa + 5;
   }
 
-  // Voluntários
-  y = novaPaginaSeNecessario(doc, y, 12);
-  y = desenharTituloSecao(doc, 'Voluntários', y);
-  if (viagem.voluntarios.length > 0) {
-    for (const v of viagem.voluntarios) {
-      const texto = [v.nome, v.funcao ? `(${v.funcao})` : null, v.observacao ? `— ${v.observacao}` : null]
-        .filter(Boolean)
-        .join(' ');
-      const linhas = doc.splitTextToSize(texto, LARGURA_UTIL);
-      const altura = linhas.length * 4.2 + 0.6;
-      y = novaPaginaSeNecessario(doc, y, altura);
-      doc.setFont('PublicSans', 'normal');
-      doc.setFontSize(9.5);
-      doc.setTextColor(...COR_SLATE_900);
-      doc.text(linhas, MARGEM, y);
-      y += altura;
-    }
-  } else {
-    doc.setFont('PublicSans', 'italic');
-    doc.setFontSize(9.5);
-    doc.setTextColor(...COR_SLATE_400);
-    doc.text('Ainda não registrados', MARGEM, y);
-    y += 6;
-  }
-  y += 3;
-
   // Versículo de encerramento + assinaturas: tratados como um bloco só, para nunca serem
   // separados entre páginas (ex.: os nomes da Gestora e da Secretaria ficarem sozinhos numa
-  // página nova caso a lista de voluntários ou outro dado cresça).
+  // página nova). Ficam na página 1 — os anexos (Atendimentos e Fotos) não levam assinatura.
   const linhasVersiculo = doc.splitTextToSize(VERSICULO_TEXTO, LARGURA_UTIL - 20);
   const alturaVersiculo = linhasVersiculo.length * 5 + 9;
 
@@ -263,11 +213,11 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
     y += 7;
   }
 
-  // Atendimentos — página própria (página 2).
+  // Anexo I — Atendimentos (página própria).
   const grupos = gruposAtendimentoComValores(viagem);
   doc.addPage();
   y = 20;
-  y = desenharTituloSecao(doc, 'Atendimentos', y);
+  y = desenharTituloSecao(doc, 'Anexo I — Atendimentos', y);
 
   if (grupos.length > 0) {
     const ALTURA_FAIXA = 7.5;
@@ -330,11 +280,11 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
     y += alturaCaixa + 8;
   }
 
-  // Fotos (anexo) — página própria (página 3).
+  // Anexo II — Fotos (página própria).
   if (fotos.length > 0) {
     doc.addPage();
     y = 20;
-    y = desenharTituloSecao(doc, 'Anexo — Fotos', y);
+    y = desenharTituloSecao(doc, 'Anexo II — Fotos', y);
 
     // Cada foto mantém sua proporção original (retrato/paisagem), como num fotojornalismo,
     // em vez do recorte quadrado antigo — o aspecto é limitado para evitar retratos ou

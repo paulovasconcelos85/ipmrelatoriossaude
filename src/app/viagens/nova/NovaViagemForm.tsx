@@ -19,7 +19,7 @@ function BotaoSalvar() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-full bg-blue-900 px-6 py-3 text-base font-bold text-white shadow-sm transition-all duration-150 hover:bg-blue-800 active:scale-95 disabled:opacity-60 disabled:active:scale-100"
+      className="rounded-full bg-accent-500 px-6 py-3 text-base font-bold text-white shadow-sm transition-all duration-150 hover:bg-accent-600 active:scale-95 disabled:opacity-60 disabled:active:scale-100"
     >
       {pending ? 'Salvando...' : 'Salvar viagem'}
     </button>
@@ -164,7 +164,7 @@ export default function NovaViagemForm({
       )}
 
       <section className="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-bold text-blue-900">Dados da viagem</h2>
+        <h2 className="mb-4 text-lg font-bold text-primary-900">Dados da viagem</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm font-semibold text-slate-600">
             Data de saída *
@@ -255,7 +255,7 @@ export default function NovaViagemForm({
       </section>
 
       <section className="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-bold text-blue-900">Transporte</h2>
+        <h2 className="mb-4 text-lg font-bold text-primary-900">Transporte</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm font-semibold text-slate-600">
             Tipo de transporte
@@ -295,7 +295,7 @@ export default function NovaViagemForm({
       </section>
 
       <section className="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-bold text-blue-900">Equipe</h2>
+        <h2 className="mb-4 text-lg font-bold text-primary-900">Equipe</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
             <span className="text-sm font-semibold text-slate-600">Coordenador(es)</span>
@@ -397,7 +397,7 @@ export default function NovaViagemForm({
                   </label>
                 </div>
                 <details open={linha.observacao.trim() !== ''}>
-                  <summary className="cursor-pointer text-xs font-semibold text-blue-700">
+                  <summary className="cursor-pointer text-xs font-semibold text-primary-700">
                     {linha.observacao.trim() !== '' ? 'Observação' : '+ Adicionar observação'}
                   </summary>
                   <textarea
@@ -421,7 +421,7 @@ export default function NovaViagemForm({
       </section>
 
       <section className="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-bold text-blue-900">Parceiros</h2>
+        <h2 className="mb-4 text-lg font-bold text-primary-900">Parceiros</h2>
         <div className="flex flex-col gap-2">
           {parceirosDigitados.map((valor, i) => (
             <input
@@ -445,7 +445,7 @@ export default function NovaViagemForm({
       </section>
 
       <section className="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-bold text-blue-900">Observações</h2>
+        <h2 className="mb-4 text-lg font-bold text-primary-900">Observações</h2>
         <textarea
           name="observacoes"
           rows={3}
@@ -454,7 +454,7 @@ export default function NovaViagemForm({
       </section>
 
       <section className="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-bold text-blue-900">Atendimentos e atividades</h2>
+        <h2 className="mb-4 text-lg font-bold text-primary-900">Atendimentos e atividades</h2>
         <div className="flex flex-col gap-3" onChange={somarFaixasEtarias}>
           {ATENDIMENTOS_GRUPOS.map((grupo) => (
             <details
@@ -462,14 +462,14 @@ export default function NovaViagemForm({
               open={grupo.destaque}
               className={
                 grupo.destaque
-                  ? 'rounded-xl border-2 border-blue-300 bg-blue-50/50 p-3'
+                  ? 'rounded-xl border-2 border-primary-300 bg-primary-50/50 p-3'
                   : 'rounded-xl border border-slate-200 p-3'
               }
             >
               <summary
                 className={
                   grupo.destaque
-                    ? 'cursor-pointer text-base font-bold text-blue-900'
+                    ? 'cursor-pointer text-base font-bold text-primary-900'
                     : 'cursor-pointer text-base font-semibold text-slate-700'
                 }
               >
@@ -515,7 +515,7 @@ export default function NovaViagemForm({
                       key={campo.name}
                       className={
                         campo.destaque
-                          ? 'flex flex-col gap-1 rounded-lg bg-blue-100 px-2 py-1.5 text-xs font-bold text-blue-900'
+                          ? 'flex flex-col gap-1 rounded-lg bg-primary-100 px-2 py-1.5 text-xs font-bold text-primary-900'
                           : 'flex flex-col gap-1 text-xs font-semibold text-slate-500'
                       }
                     >

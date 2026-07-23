@@ -40,7 +40,7 @@ export default function ViagemCardAdmin({ viagem, numero }: { viagem: ViagemIpm;
         type="button"
         onClick={() => setAberto((v) => !v)}
         aria-expanded={aberto}
-        className="flex w-full items-center justify-center gap-2 bg-blue-900 py-4 text-lg font-bold text-white transition-all duration-150 hover:bg-blue-800 active:scale-[0.99]"
+        className="flex w-full items-center justify-center gap-2 bg-accent-500 py-4 text-lg font-bold text-white transition-all duration-150 hover:bg-accent-600 active:scale-[0.99]"
       >
         {aberto ? 'Ocultar todos os dados' : 'Ver todos os dados da viagem'}
         <span aria-hidden className="text-xl leading-none">

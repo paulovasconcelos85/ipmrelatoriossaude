@@ -16,7 +16,7 @@ export default async function LoginPage({
   return (
     <main className="flex flex-1 items-center justify-center px-4 py-16">
       <div className="w-full max-w-sm rounded-2xl border-2 border-slate-200 bg-white p-6 shadow-sm">
-        <h1 className="mb-2 text-xl font-extrabold text-blue-900">Acesso restrito</h1>
+        <h1 className="mb-2 text-xl font-extrabold text-primary-900">Acesso restrito</h1>
         <p className="mb-6 text-sm text-slate-500">Entre com sua conta Google ou Microsoft para continuar.</p>
 
         {mensagemErro && (

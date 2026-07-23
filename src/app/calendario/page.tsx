@@ -26,7 +26,7 @@ const STATUS_CONFIG: Record<StatusViagem, { rotulo: string; badge: string; borda
   },
   agendada: {
     rotulo: 'Programada',
-    badge: 'bg-blue-100 text-blue-900',
+    badge: 'bg-primary-100 text-primary-900',
     borda: 'border-slate-200',
   },
 };
@@ -50,7 +50,7 @@ export default async function Home() {
   return (
     <>
       <ScrollToAtual />
-      <header className="sticky top-0 z-10 bg-blue-900 px-4 py-4 shadow-md">
+      <header className="sticky top-0 z-10 bg-primary-900 px-4 py-4 shadow-md">
         <div className="mx-auto flex max-w-2xl flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-xl font-extrabold leading-tight text-white sm:text-2xl">
@@ -58,7 +58,7 @@ export default async function Home() {
             </h1>
             <FontSizeControl />
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-blue-100">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-primary-100">
             <span>Toque em A+ para aumentar o tamanho da letra</span>
             <Link href="/viagens" className="font-semibold underline underline-offset-2">
               IPM Maria (viagens e atendimentos) →
@@ -81,7 +81,7 @@ export default async function Home() {
 
         {meses.map(([chave, viagensDoMes]) => (
           <section key={chave} className="mb-10">
-            <h2 className="mb-4 text-lg font-bold capitalize text-blue-900 sm:text-xl">
+            <h2 className="mb-4 text-lg font-bold capitalize text-primary-900 sm:text-xl">
               {nomeMes(viagensDoMes[0].data_saida)}
             </h2>
 
@@ -100,10 +100,10 @@ export default async function Home() {
                       : status === 'realizada'
                         ? `${config.borda} opacity-70`
                         : config.borda
-                  } ${ehAtual ? 'ring-4 ring-blue-300' : ''}`}
+                  } ${ehAtual ? 'ring-4 ring-primary-300' : ''}`}
                 >
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-lg font-bold text-blue-900 sm:text-xl">
+                    <p className="text-lg font-bold text-primary-900 sm:text-xl">
                       {formatarPeriodo(viagem.data_saida, viagem.data_retorno)}
                     </p>
                     {viagem.cancelada ? (
