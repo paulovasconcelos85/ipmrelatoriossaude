@@ -1,5 +1,6 @@
 import AdminHeader from './admin/AdminHeader';
 import { listViagensIpm, type ViagemIpm } from '@/lib/viagens-ipm';
+import Dashboard from './viagens/Dashboard';
 import ViagemCardAdmin from './admin/ViagemCardAdmin';
 import { logoutAdmin } from './logout-action';
 
@@ -36,6 +37,8 @@ export default async function AdminViagens() {
       <AdminHeader totalViagens={viagens.length} onLogout={logoutAdmin} />
 
       <main className="w-full flex-1 px-4 pb-16 pt-6 sm:px-6 lg:px-8">
+        <Dashboard viagens={viagens} />
+
         <div className="flex flex-col gap-3">
           {viagens.length === 0 && (
             <p className="rounded-2xl border-2 border-slate-200 bg-white p-5 text-center text-slate-500 shadow-sm">
