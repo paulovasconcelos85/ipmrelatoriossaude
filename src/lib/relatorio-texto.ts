@@ -1,6 +1,6 @@
 import { gruposAtendimentoComValores } from '@/lib/atendimentos-fields';
 import { formatarPeriodo } from '@/lib/format';
-import type { ViagemIpm } from '@/lib/viagens-ipm';
+import type { ViagemIpm, Voluntario } from '@/lib/viagens-ipm';
 
 export const ASSINATURAS_RELATORIO: [string, string][] = [
   ['Juciane Seleguim', 'Gestora da Secretaria de Missões Regional e Transcultural'],
@@ -35,9 +35,6 @@ export function montarParagrafoAbertura(viagem: ViagemIpm): string {
   if (viagem.parceirosComLocal.length > 0) {
     clausulas.push(`em parceria com ${juntarComE(viagem.parceirosComLocal)}`);
   }
-  if (viagem.lideres_saude.length > 0) {
-    clausulas.push(`liderança de ${juntarComE(viagem.lideres_saude)}`);
-  }
   if (viagem.barco) {
     clausulas.push(`no barco "${viagem.barco}"`);
   } else if (viagem.tipo_transporte) {
@@ -65,27 +62,24 @@ export function montarParagrafoLideranca(viagem: ViagemIpm): string | null {
   return `A liderança da equipe de saúde ficou a cargo de ${juntarComE(viagem.lideres_saude)}, da Igreja Presbiteriana de Manaus.`;
 }
 
-/** Parágrafo com a equipe de voluntários, agrupada por função (ex.: "Fulano, médica; Beltrano e Sicrano, dentistas"). */
-export function montarParagrafoEquipe(viagem: ViagemIpm): string | null {
-  if (viagem.voluntarios.length === 0) return null;
+/** Pares label/valor com os dados gerais da viagem (Anexo I e texto do WhatsApp). */
+export function montarDadosViagem(viagem: ViagemIpm): [string, string][] {
+  const dados: [string, string][] = [];
+  if (viagem.area) dados.push(['Área', viagem.area]);
+  if (viagem.local) dados.push(['Local', viagem.local]);
+  if (viagem.comunidades.length > 0) dados.push(['Comunidades atendidas', juntarComE(viagem.comunidades)]);
+  if (viagem.dias_missao != null) dados.push(['Dias em missão', String(viagem.dias_missao)]);
+  if (viagem.barco) dados.push(['Barco', viagem.barco]);
+  if (viagem.tipo_transporte) dados.push(['Transporte', viagem.tipo_transporte]);
+  if (viagem.coordenadores.length > 0) dados.push(['Coordenador(es)', juntarComE(viagem.coordenadores)]);
+  if (viagem.lideres_saude.length > 0) dados.push(['Líder(es) de saúde', juntarComE(viagem.lideres_saude)]);
+  if (viagem.parceirosComLocal.length > 0) dados.push(['Parceiros', juntarComE(viagem.parceirosComLocal)]);
+  return dados;
+}
 
-  const semFuncao: string[] = [];
-  const porFuncao = new Map<string, string[]>();
-  for (const v of viagem.voluntarios) {
-    const nome = v.observacao ? `${v.nome} (${v.observacao})` : v.nome;
-    if (!v.funcao) {
-      semFuncao.push(nome);
-      continue;
-    }
-    const lista = porFuncao.get(v.funcao) ?? [];
-    lista.push(nome);
-    porFuncao.set(v.funcao, lista);
-  }
-
-  const partes = [...porFuncao.entries()].map(([funcao, nomes]) => `${juntarComE(nomes)}, ${funcao}`);
-  if (semFuncao.length > 0) partes.push(juntarComE(semFuncao));
-
-  return `Houve a participação dos seguintes voluntários: ${partes.join('; ')}.`;
+/** Uma linha de voluntário para a lista do Anexo I, ex.: "Fulano (médica) — observação". */
+export function montarLinhaVoluntario(v: Voluntario): string {
+  return [v.nome, v.funcao ? `(${v.funcao})` : null, v.observacao ? `— ${v.observacao}` : null].filter(Boolean).join(' ');
 }
 
 /** Parágrafo com o total de atendimentos e as demais atividades realizadas (evangelismo, doações etc.). */
@@ -126,7 +120,6 @@ export function montarParagrafosRelatorio(viagem: ViagemIpm): string[] {
   return [
     montarParagrafoAbertura(viagem),
     montarParagrafoLideranca(viagem),
-    montarParagrafoEquipe(viagem),
     montarParagrafoAtividades(viagem),
     PARAGRAFO_ANEXOS,
   ].filter((p): p is string => Boolean(p));
@@ -148,16 +141,7 @@ export function montarTextoWhatsapp(viagem: ViagemIpm): string {
   linhas.push('');
   linhas.push(montarParagrafoAbertura(viagem));
 
-  const dados: [string, string][] = [];
-  if (viagem.area) dados.push(['Área', viagem.area]);
-  if (viagem.local) dados.push(['Local', viagem.local]);
-  if (viagem.comunidades.length > 0) dados.push(['Comunidades visitadas', viagem.comunidades.join(', ')]);
-  if (viagem.dias_missao != null) dados.push(['Dias em missão', String(viagem.dias_missao)]);
-  if (viagem.tipo_transporte) dados.push(['Transporte', viagem.tipo_transporte]);
-  if (viagem.coordenadores.length > 0) dados.push(['Coordenador(es)', viagem.coordenadores.join(', ')]);
-  if (viagem.lideres_saude.length > 0) dados.push(['Líder(es) de saúde', viagem.lideres_saude.join(', ')]);
-  if (viagem.parceirosComLocal.length > 0) dados.push(['Parceiros', viagem.parceirosComLocal.join(', ')]);
-
+  const dados = montarDadosViagem(viagem);
   if (dados.length > 0) {
     linhas.push('');
     linhas.push('*Dados da viagem*');
@@ -176,10 +160,7 @@ export function montarTextoWhatsapp(viagem: ViagemIpm): string {
   linhas.push('*Voluntários*');
   if (viagem.voluntarios.length > 0) {
     for (const v of viagem.voluntarios) {
-      const complemento = [v.funcao ? `(${v.funcao})` : null, v.observacao ? `— ${v.observacao}` : null]
-        .filter(Boolean)
-        .join(' ');
-      linhas.push(complemento ? `${v.nome} ${complemento}` : v.nome);
+      linhas.push(montarLinhaVoluntario(v));
     }
   } else {
     linhas.push('Ainda não registrados');

@@ -5,6 +5,8 @@ import { formatarDataPorExtenso, formatarPeriodo } from '@/lib/format';
 import {
   ASSINATURAS_RELATORIO,
   ehViagemAmazon,
+  montarDadosViagem,
+  montarLinhaVoluntario,
   montarParagrafosRelatorio,
   VERSICULO_REFERENCIA,
   VERSICULO_TEXTO,
@@ -145,8 +147,8 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
   doc.text(subtitulo, MARGEM, y);
   y += 10;
 
-  // Corpo do relatório: parágrafos corridos (abertura, liderança, equipe, atividades e remissão
-  // aos anexos), nos moldes dos relatórios em Word usados até hoje — sem tabelas nem listas.
+  // Corpo do relatório: parágrafos corridos (abertura, liderança, atividades e remissão aos
+  // anexos), nos moldes dos relatórios em Word usados até hoje — sem tabelas nem listas.
   for (const paragrafo of montarParagrafosRelatorio(viagem)) {
     const linhas = doc.splitTextToSize(paragrafo, LARGURA_UTIL);
     const altura = linhas.length * 5;
@@ -213,11 +215,35 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
     y += 7;
   }
 
-  // Anexo I — Atendimentos (página própria).
+  // Anexo I — dados da viagem, atendimentos e voluntários (página própria).
   const grupos = gruposAtendimentoComValores(viagem);
   doc.addPage();
   y = 20;
   y = desenharTituloSecao(doc, 'Anexo I — Atendimentos', y);
+
+  // Dados da viagem (barco, parceiros, comunidades atendidas etc.).
+  const dadosViagem = montarDadosViagem(viagem);
+  if (dadosViagem.length > 0) {
+    for (const [label, valor] of dadosViagem) {
+      const linhasValor = doc.splitTextToSize(valor, LARGURA_UTIL - 45);
+      const altura = Math.max(5, linhasValor.length * 4.5);
+      y = novaPaginaSeNecessario(doc, y, altura);
+
+      doc.setFont('PublicSans', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...COR_SLATE_500);
+      doc.text(label, MARGEM, y);
+
+      doc.setFont('PublicSans', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(...COR_SLATE_900);
+      doc.text(linhasValor, MARGEM + 42, y);
+      y += altura + 1.5;
+    }
+    y += 5;
+  }
+
+  y = desenharTituloSecao(doc, 'Atendimentos', y);
 
   if (grupos.length > 0) {
     const ALTURA_FAIXA = 7.5;
@@ -278,6 +304,23 @@ export async function gerarRelatorioPdf(viagem: ViagemIpm) {
     doc.setTextColor(146, 64, 14);
     doc.text(linhasObs, MARGEM + 4, y + 5.5);
     y += alturaCaixa + 8;
+  }
+
+  // Voluntários (lista, ainda dentro do Anexo I).
+  if (viagem.voluntarios.length > 0) {
+    y = novaPaginaSeNecessario(doc, y, 12);
+    y = desenharTituloSecao(doc, 'Voluntários', y);
+    for (const v of viagem.voluntarios) {
+      const linhas = doc.splitTextToSize(montarLinhaVoluntario(v), LARGURA_UTIL);
+      const altura = linhas.length * 4.2 + 0.6;
+      y = novaPaginaSeNecessario(doc, y, altura);
+      doc.setFont('PublicSans', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(...COR_SLATE_900);
+      doc.text(linhas, MARGEM, y);
+      y += altura;
+    }
+    y += 3;
   }
 
   // Anexo II — Fotos (página própria).

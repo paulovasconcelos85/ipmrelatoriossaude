@@ -24,6 +24,8 @@ import { formatarDataPorExtenso, formatarPeriodo } from '@/lib/format';
 import {
   ASSINATURAS_RELATORIO,
   ehViagemAmazon,
+  montarDadosViagem,
+  montarLinhaVoluntario,
   montarParagrafosRelatorio,
   VERSICULO_REFERENCIA,
   VERSICULO_TEXTO,
@@ -104,6 +106,40 @@ function textoNormal(texto: string, size = 20, color = COR_SLATE_900) {
   return new TextRun({ text: texto, size, color });
 }
 
+function subtituloSecao(texto: string): Paragraph {
+  return new Paragraph({
+    children: [new TextRun({ text: texto, bold: true, size: 20, color: COR_SLATE_900 })],
+    spacing: { before: 160, after: 100 },
+  });
+}
+
+/** Tabela sem bordas para pares label/valor (Dados da viagem, no Anexo I). */
+function tabelaLabelValor(linhas: [string, string][]): Table {
+  const larguraLabel = convertMillimetersToTwip(42);
+  return new Table({
+    width: { size: LARGURA_UTIL_TWIPS, type: WidthType.DXA },
+    columnWidths: [larguraLabel, LARGURA_UTIL_TWIPS - larguraLabel],
+    borders: BORDAS_TABELA_INVISIVEL,
+    rows: linhas.map(
+      ([label, valor]) =>
+        new TableRow({
+          cantSplit: true,
+          children: [
+            new TableCell({
+              width: { size: larguraLabel, type: WidthType.DXA },
+              margins: MARGEM_CELULA,
+              children: [new Paragraph({ children: [textoNormal(label, 18, COR_SLATE_500)] })],
+            }),
+            new TableCell({
+              margins: MARGEM_CELULA,
+              children: [new Paragraph({ children: [textoNormal(valor)] })],
+            }),
+          ],
+        }),
+    ),
+  });
+}
+
 /** Caixa com fundo cinza (parágrafo dentro de uma tabela de 1 célula, para simular um bloco destacado). */
 function caixaDestaque(texto: string, corFundo: string, corTexto: string): Table {
   return new Table({
@@ -182,13 +218,20 @@ function montarSecaoAtendimentos(viagem: ViagemIpm): (Paragraph | Table)[] {
     }),
   ];
 
+  // Dados da viagem (barco, parceiros, comunidades atendidas etc.).
+  const dadosViagem = montarDadosViagem(viagem);
+  if (dadosViagem.length > 0) {
+    blocos.push(tabelaLabelValor(dadosViagem), new Paragraph({ spacing: { after: 120 } }));
+  }
+
+  blocos.push(subtituloSecao('Atendimentos'));
+
   if (grupos.length === 0) {
     blocos.push(
       new Paragraph({
         children: [new TextRun({ text: 'Sem atendimentos registrados nesta viagem.', italics: true, size: 19, color: COR_SLATE_400 })],
       }),
     );
-    return blocos;
   }
 
   const larguraValor = convertMillimetersToTwip(28);
@@ -262,6 +305,14 @@ function montarSecaoAtendimentos(viagem: ViagemIpm): (Paragraph | Table)[] {
 
   if (viagem.atendimentosObservacoes) {
     blocos.push(caixaDestaque(viagem.atendimentosObservacoes, 'FFFBEB', '92400E'), new Paragraph({ spacing: { after: 80 } }));
+  }
+
+  // Voluntários (lista, ainda dentro do Anexo I).
+  if (viagem.voluntarios.length > 0) {
+    blocos.push(subtituloSecao('Voluntários'));
+    for (const v of viagem.voluntarios) {
+      blocos.push(new Paragraph({ children: [textoNormal(montarLinhaVoluntario(v), 19)], spacing: { after: 40 } }));
+    }
   }
 
   return blocos;
@@ -364,8 +415,8 @@ export async function gerarRelatorioDocx(viagem: ViagemIpm): Promise<void> {
     }),
   ];
 
-  // Corpo do relatório: parágrafos corridos (abertura, liderança, equipe, atividades e remissão
-  // aos anexos), nos moldes dos relatórios em Word usados até hoje — sem tabelas nem listas.
+  // Corpo do relatório: parágrafos corridos (abertura, liderança, atividades e remissão aos
+  // anexos), nos moldes dos relatórios em Word usados até hoje — sem tabelas nem listas.
   for (const paragrafo of montarParagrafosRelatorio(viagem)) {
     corpo.push(
       new Paragraph({
