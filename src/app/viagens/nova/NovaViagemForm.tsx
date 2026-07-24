@@ -7,9 +7,11 @@ import { ATENDIMENTOS_GRUPOS, type ChaveGrupoDinamico } from '@/lib/atendimentos
 import {
   atualizarListaDinamica,
   atualizarListaEstatisticas,
-  atualizarListaVoluntarios,
+  atualizarCampoGrupoVoluntario,
+  atualizarNomeGrupoVoluntario,
+  criarGrupoVoluntarioVazio,
   type LinhaEstatistica,
-  type LinhaVoluntario,
+  type LinhaGrupoVoluntario,
 } from '@/lib/campos-dinamicos';
 import type { Lookup, Profissional } from '@/lib/viagens-ipm';
 
@@ -83,12 +85,18 @@ export default function NovaViagemForm({
     setComunidadesDigitadas((atual) => atualizarListaDinamica(atual, index, valor));
   }
 
-  const [voluntariosDigitados, setVoluntariosDigitados] = useState<LinhaVoluntario[]>([
-    { nome: '', funcao: '', observacao: '' },
-  ]);
+  const [gruposVoluntarios, setGruposVoluntarios] = useState<LinhaGrupoVoluntario[]>([criarGrupoVoluntarioVazio()]);
 
-  function alterarVoluntario(index: number, campo: keyof LinhaVoluntario, valor: string) {
-    setVoluntariosDigitados((atual) => atualizarListaVoluntarios(atual, index, campo, valor));
+  function alterarFuncaoGrupo(index: number, valor: string) {
+    setGruposVoluntarios((atual) => atualizarCampoGrupoVoluntario(atual, index, 'funcao', valor));
+  }
+
+  function alterarObservacaoGrupo(index: number, valor: string) {
+    setGruposVoluntarios((atual) => atualizarCampoGrupoVoluntario(atual, index, 'observacao', valor));
+  }
+
+  function alterarNomeGrupo(grupoIndex: number, nomeIndex: number, valor: string) {
+    setGruposVoluntarios((atual) => atualizarNomeGrupoVoluntario(atual, grupoIndex, nomeIndex, valor));
   }
 
   const [itensAtividadeSaude, setItensAtividadeSaude] = useState<LinhaEstatistica[]>([{ nome: '', quantidade: '' }]);
@@ -359,73 +367,78 @@ export default function NovaViagemForm({
         </div>
 
         <h3 className="mb-3 mt-6 text-sm font-bold text-slate-700">Profissionais que foram na viagem</h3>
+        <p className="mb-3 -mt-2 text-xs text-slate-500">
+          Escolha o cargo/função uma vez e adicione todos os nomes que exercem essa função na viagem.
+        </p>
         <div className="flex flex-col gap-4">
-          {voluntariosDigitados.map((linha, i) => {
-            const cargoDigitado = linha.funcao.trim().toLowerCase();
+          {gruposVoluntarios.map((grupo, gi) => {
+            const cargoDigitado = grupo.funcao.trim().toLowerCase();
             const profissionaisDoCargo = cargoDigitado
               ? profissionais.filter((p) => p.cargo?.trim().toLowerCase() === cargoDigitado)
               : profissionais;
 
             return (
-              <div key={i} className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
-                    Cargo/função
-                    <div className="relative">
-                      <input
-                        type="text"
-                        name="voluntario_funcao"
-                        list="lista-funcoes-voluntario"
-                        value={linha.funcao}
-                        onChange={(e) => alterarVoluntario(i, 'funcao', e.target.value)}
-                        placeholder="Toque para ver os cargos já usados..."
-                        autoComplete="off"
-                        className="w-full rounded-lg border border-slate-300 py-2 pl-3 pr-8 text-base text-slate-900"
-                      />
-                      <button
-                        type="button"
-                        tabIndex={-1}
-                        aria-label="Ver cargos já usados"
-                        onClick={(e) => {
-                          const input = e.currentTarget.previousElementSibling as
-                            | (HTMLInputElement & { showPicker?: () => void })
-                            | null;
-                          input?.focus();
-                          input?.showPicker?.();
-                        }}
-                        className="absolute inset-y-0 right-0 flex w-8 items-center justify-center text-slate-400"
-                      >
-                        ▾
-                      </button>
-                    </div>
-                  </label>
-                  <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
-                    Nome
+              <div key={gi} className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4">
+                <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
+                  Cargo/função
+                  <div className="relative">
                     <input
                       type="text"
-                      name="voluntario_nome"
-                      list={`lista-profissionais-voluntario-${i}`}
-                      value={linha.nome}
-                      onChange={(e) => alterarVoluntario(i, 'nome', e.target.value)}
-                      placeholder="Escolha o cargo para filtrar os nomes"
+                      list="lista-funcoes-voluntario"
+                      value={grupo.funcao}
+                      onChange={(e) => alterarFuncaoGrupo(gi, e.target.value)}
+                      placeholder="Toque para ver os cargos já usados..."
                       autoComplete="off"
-                      className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
+                      className="w-full rounded-lg border border-slate-300 py-2 pl-3 pr-8 text-base text-slate-900"
                     />
-                    <datalist id={`lista-profissionais-voluntario-${i}`}>
-                      {profissionaisDoCargo.map((p) => (
-                        <option key={p.id} value={p.nome} />
-                      ))}
-                    </datalist>
-                  </label>
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      aria-label="Ver cargos já usados"
+                      onClick={(e) => {
+                        const input = e.currentTarget.previousElementSibling as
+                          | (HTMLInputElement & { showPicker?: () => void })
+                          | null;
+                        input?.focus();
+                        input?.showPicker?.();
+                      }}
+                      className="absolute inset-y-0 right-0 flex w-8 items-center justify-center text-slate-400"
+                    >
+                      ▾
+                    </button>
+                  </div>
+                </label>
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-semibold text-slate-500">Nome(s)</span>
+                  {grupo.nomes.map((nome, ni) => (
+                    <div key={ni}>
+                      <input type="hidden" name="voluntario_funcao" value={grupo.funcao} />
+                      <input
+                        type="text"
+                        name="voluntario_nome"
+                        list={`lista-profissionais-voluntario-${gi}`}
+                        value={nome}
+                        onChange={(e) => alterarNomeGrupo(gi, ni, e.target.value)}
+                        placeholder={ni === 0 ? 'Escolha o cargo para filtrar os nomes' : 'Adicionar outro nome...'}
+                        autoComplete="off"
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
+                      />
+                      <input type="hidden" name="voluntario_observacao" value={grupo.observacao} />
+                    </div>
+                  ))}
+                  <datalist id={`lista-profissionais-voluntario-${gi}`}>
+                    {profissionaisDoCargo.map((p) => (
+                      <option key={p.id} value={p.nome} />
+                    ))}
+                  </datalist>
                 </div>
-                <details open={linha.observacao.trim() !== ''}>
+                <details open={grupo.observacao.trim() !== ''}>
                   <summary className="cursor-pointer text-xs font-semibold text-primary-700">
-                    {linha.observacao.trim() !== '' ? 'Observação' : '+ Adicionar observação'}
+                    {grupo.observacao.trim() !== '' ? 'Observação' : '+ Adicionar observação'}
                   </summary>
                   <textarea
-                    name="voluntario_observacao"
-                    value={linha.observacao}
-                    onChange={(e) => alterarVoluntario(i, 'observacao', e.target.value)}
+                    value={grupo.observacao}
+                    onChange={(e) => alterarObservacaoGrupo(gi, e.target.value)}
                     placeholder="Auxiliando na triagem, na Farmácia..."
                     rows={2}
                     className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
