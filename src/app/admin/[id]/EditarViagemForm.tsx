@@ -7,8 +7,8 @@ import { ATENDIMENTOS_GRUPOS, type ChaveGrupoDinamico } from '@/lib/atendimentos
 import {
   atualizarListaDinamica,
   atualizarListaEstatisticas,
-  atualizarCampoGrupoVoluntario,
-  atualizarNomeGrupoVoluntario,
+  atualizarFuncaoGrupoVoluntario,
+  atualizarPessoaGrupoVoluntario,
   agruparVoluntariosExistentes,
   type LinhaEstatistica,
   type LinhaGrupoVoluntario,
@@ -110,15 +110,11 @@ export default function EditarViagemForm({
   );
 
   function alterarFuncaoGrupo(index: number, valor: string) {
-    setGruposVoluntarios((atual) => atualizarCampoGrupoVoluntario(atual, index, 'funcao', valor));
+    setGruposVoluntarios((atual) => atualizarFuncaoGrupoVoluntario(atual, index, valor));
   }
 
-  function alterarObservacaoGrupo(index: number, valor: string) {
-    setGruposVoluntarios((atual) => atualizarCampoGrupoVoluntario(atual, index, 'observacao', valor));
-  }
-
-  function alterarNomeGrupo(grupoIndex: number, nomeIndex: number, valor: string) {
-    setGruposVoluntarios((atual) => atualizarNomeGrupoVoluntario(atual, grupoIndex, nomeIndex, valor));
+  function alterarPessoaGrupo(grupoIndex: number, pessoaIndex: number, campo: 'nome' | 'observacao', valor: string) {
+    setGruposVoluntarios((atual) => atualizarPessoaGrupoVoluntario(atual, grupoIndex, pessoaIndex, campo, valor));
   }
 
   function itensIniciais(chave: ChaveGrupoDinamico): LinhaEstatistica[] {
@@ -154,21 +150,50 @@ export default function EditarViagemForm({
     setItens(atualizarListaEstatisticas(itensPorGrupoDinamico[chave], index, campo, valor));
   }
 
+  function calcularEnfermagemAutomatica(form: HTMLFormElement) {
+    const valor = (nome: string) => {
+      const campo = form.elements.namedItem(nome) as HTMLInputElement | null;
+      const numero = campo ? parseInt(campo.value, 10) : 0;
+      return Number.isNaN(numero) ? 0 : numero;
+    };
+    const definir = (nome: string, numero: number) => {
+      const campo = form.elements.namedItem(nome) as HTMLInputElement | null;
+      if (campo) campo.value = String(numero);
+    };
+
+    const criancas = valor('criancas_medico') + valor('criancas_odonto');
+    const adolescentes = valor('adolescentes_medico') + valor('adolescentes_odonto');
+    const adultos = valor('adultos_medico') + valor('adultos_odonto');
+
+    definir('criancas_enfermagem', criancas);
+    definir('adolescentes_enfermagem', adolescentes);
+    definir('adultos_enfermagem', adultos);
+    definir('atendimentos_enfermagem', criancas + adolescentes + adultos);
+    definir('procedimentos_enfermagem', criancas * 3 + adolescentes * 3 + adultos * 5);
+  }
+
   function somarFaixasEtarias(e: ChangeEvent<HTMLDivElement>) {
     const alvo = e.target as HTMLInputElement;
+    const form = alvo.form;
+    if (!form) return;
+
     const grupo = ATENDIMENTOS_GRUPOS.find((g) => g.somaAutomatica?.parcelas.includes(alvo.name));
     const soma = grupo?.somaAutomatica;
-    const form = alvo.form;
-    if (!soma || !form) return;
+    if (soma) {
+      const total = soma.parcelas.reduce((acc, nome) => {
+        const campo = form.elements.namedItem(nome) as HTMLInputElement | null;
+        const valor = campo ? parseInt(campo.value, 10) : 0;
+        return acc + (Number.isNaN(valor) ? 0 : valor);
+      }, 0);
 
-    const total = soma.parcelas.reduce((acc, nome) => {
-      const campo = form.elements.namedItem(nome) as HTMLInputElement | null;
-      const valor = campo ? parseInt(campo.value, 10) : 0;
-      return acc + (Number.isNaN(valor) ? 0 : valor);
-    }, 0);
+      const campoTotal = form.elements.namedItem(soma.total) as HTMLInputElement | null;
+      if (campoTotal) campoTotal.value = String(total);
+    }
 
-    const campoTotal = form.elements.namedItem(soma.total) as HTMLInputElement | null;
-    if (campoTotal) campoTotal.value = String(total);
+    const grupoOrigem = ATENDIMENTOS_GRUPOS.find((g) => g.campos.some((c) => c.name === alvo.name));
+    if (grupoOrigem?.titulo === 'Atendimento médico' || grupoOrigem?.titulo === 'Atendimento odontológico') {
+      calcularEnfermagemAutomatica(form);
+    }
   }
 
   return (
@@ -333,34 +358,34 @@ export default function EditarViagemForm({
                     placeholder="Toque para ver os cargos já usados..."
                   />
                 </label>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                   <span className="text-xs font-semibold text-slate-500">Nome(s)</span>
-                  {grupo.nomes.map((nome, ni) => (
-                    <div key={ni}>
+                  {grupo.pessoas.map((pessoa, pi) => (
+                    <div key={pi} className="flex flex-col gap-2 rounded-lg border border-slate-100 p-3">
                       <input type="hidden" name="voluntario_funcao" value={grupo.funcao} />
                       <Combobox
                         name="voluntario_nome"
                         options={profissionaisDoCargo.map((p) => p.nome)}
-                        value={nome}
-                        onValueChange={(v) => alterarNomeGrupo(gi, ni, v)}
-                        placeholder={ni === 0 ? 'Escolha o cargo para filtrar os nomes' : 'Adicionar outro nome...'}
+                        value={pessoa.nome}
+                        onValueChange={(v) => alterarPessoaGrupo(gi, pi, 'nome', v)}
+                        placeholder={pi === 0 ? 'Escolha o cargo para filtrar os nomes' : 'Adicionar outro nome...'}
                       />
-                      <input type="hidden" name="voluntario_observacao" value={grupo.observacao} />
+                      <details open={pessoa.observacao.trim() !== ''}>
+                        <summary className="cursor-pointer text-xs font-semibold text-primary-700">
+                          {pessoa.observacao.trim() !== '' ? 'Observação' : '+ Adicionar observação'}
+                        </summary>
+                        <textarea
+                          name="voluntario_observacao"
+                          value={pessoa.observacao}
+                          onChange={(e) => alterarPessoaGrupo(gi, pi, 'observacao', e.target.value)}
+                          placeholder="Auxiliando na triagem, na Farmácia..."
+                          rows={2}
+                          className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
+                        />
+                      </details>
                     </div>
                   ))}
                 </div>
-                <details open={grupo.observacao.trim() !== ''}>
-                  <summary className="cursor-pointer text-xs font-semibold text-primary-700">
-                    {grupo.observacao.trim() !== '' ? 'Observação' : '+ Adicionar observação'}
-                  </summary>
-                  <textarea
-                    value={grupo.observacao}
-                    onChange={(e) => alterarObservacaoGrupo(gi, e.target.value)}
-                    placeholder="Auxiliando na triagem, na Farmácia..."
-                    rows={2}
-                    className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
-                  />
-                </details>
               </div>
             );
           })}

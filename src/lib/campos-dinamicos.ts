@@ -28,18 +28,28 @@ export function atualizarListaEstatisticas(
 }
 
 /**
- * Um "grupo" de voluntários que compartilham o mesmo cargo/função e a mesma observação
- * (ex.: várias médicas de uma vez) — em vez de repetir o cargo para cada pessoa, digita-se
- * o cargo uma vez e vários nomes na sequência.
+ * Uma pessoa dentro de um grupo de voluntários: nome e observação são individuais
+ * (cada pessoa pode ter uma observação diferente, mesmo compartilhando o cargo).
  */
-export type LinhaGrupoVoluntario = { funcao: string; nomes: string[]; observacao: string };
+export type PessoaGrupoVoluntario = { nome: string; observacao: string };
+
+/**
+ * Um "grupo" de voluntários que compartilham o mesmo cargo/função (ex.: várias médicas de
+ * uma vez) — em vez de repetir o cargo para cada pessoa, digita-se o cargo uma vez e depois
+ * os nomes na sequência, cada um com sua própria observação.
+ */
+export type LinhaGrupoVoluntario = { funcao: string; pessoas: PessoaGrupoVoluntario[] };
+
+function pessoaVazia(): PessoaGrupoVoluntario {
+  return { nome: '', observacao: '' };
+}
 
 export function criarGrupoVoluntarioVazio(): LinhaGrupoVoluntario {
-  return { funcao: '', nomes: [''], observacao: '' };
+  return { funcao: '', pessoas: [pessoaVazia()] };
 }
 
 function grupoVoluntarioEstaVazio(g: LinhaGrupoVoluntario): boolean {
-  return g.funcao.trim() === '' && g.observacao.trim() === '' && g.nomes.every((n) => n.trim() === '');
+  return g.funcao.trim() === '' && g.pessoas.every((p) => p.nome.trim() === '' && p.observacao.trim() === '');
 }
 
 function normalizarGruposVoluntarios(grupos: LinhaGrupoVoluntario[]): LinhaGrupoVoluntario[] {
@@ -47,48 +57,51 @@ function normalizarGruposVoluntarios(grupos: LinhaGrupoVoluntario[]): LinhaGrupo
   return [...preenchidos, criarGrupoVoluntarioVazio()];
 }
 
-/** Atualiza o cargo/função ou a observação do grupo (compartilhados por todos os nomes dele). */
-export function atualizarCampoGrupoVoluntario(
+/** Atualiza o cargo/função do grupo (compartilhado por todas as pessoas dele). */
+export function atualizarFuncaoGrupoVoluntario(
   atual: LinhaGrupoVoluntario[],
   index: number,
-  campo: 'funcao' | 'observacao',
   valor: string,
 ): LinhaGrupoVoluntario[] {
-  const atualizado = atual.map((g, i) => (i === index ? { ...g, [campo]: valor } : g));
+  const atualizado = atual.map((g, i) => (i === index ? { ...g, funcao: valor } : g));
   return normalizarGruposVoluntarios(atualizado);
 }
 
-/** Atualiza um dos nomes dentro do grupo (lista dinâmica, sempre com um campo vazio no final). */
-export function atualizarNomeGrupoVoluntario(
+/** Atualiza o nome ou a observação de uma pessoa dentro do grupo (lista dinâmica, sempre com uma linha vazia no final). */
+export function atualizarPessoaGrupoVoluntario(
   atual: LinhaGrupoVoluntario[],
   grupoIndex: number,
-  nomeIndex: number,
+  pessoaIndex: number,
+  campo: keyof PessoaGrupoVoluntario,
   valor: string,
 ): LinhaGrupoVoluntario[] {
-  const atualizado = atual.map((g, i) =>
-    i === grupoIndex ? { ...g, nomes: atualizarListaDinamica(g.nomes, nomeIndex, valor) } : g,
-  );
+  const atualizado = atual.map((g, i) => {
+    if (i !== grupoIndex) return g;
+    const pessoas = g.pessoas.map((p, pi) => (pi === pessoaIndex ? { ...p, [campo]: valor } : p));
+    const preenchidas = pessoas.filter((p) => p.nome.trim() !== '' || p.observacao.trim() !== '');
+    return { ...g, pessoas: [...preenchidas, pessoaVazia()] };
+  });
   return normalizarGruposVoluntarios(atualizado);
 }
 
 /**
- * Agrupa voluntários já salvos (uma linha por pessoa) em grupos por cargo/observação, para
- * pré-popular o formulário de edição no mesmo formato usado para digitar (cargo uma vez, vários nomes).
+ * Agrupa voluntários já salvos (uma linha por pessoa) em grupos por cargo, para pré-popular
+ * o formulário de edição no mesmo formato usado para digitar (cargo uma vez, várias pessoas,
+ * cada uma com sua própria observação).
  */
 export function agruparVoluntariosExistentes(
   voluntarios: { nome: string; funcao: string | null; observacao: string | null }[],
 ): LinhaGrupoVoluntario[] {
-  const grupos: { funcao: string; nomes: string[]; observacao: string }[] = [];
+  const grupos: LinhaGrupoVoluntario[] = [];
   for (const v of voluntarios) {
     const funcao = v.funcao ?? '';
-    const observacao = v.observacao ?? '';
-    const existente = grupos.find((g) => g.funcao === funcao && g.observacao === observacao);
-    if (existente) {
-      existente.nomes.push(v.nome);
-    } else {
-      grupos.push({ funcao, nomes: [v.nome], observacao });
+    let grupo = grupos.find((g) => g.funcao === funcao);
+    if (!grupo) {
+      grupo = { funcao, pessoas: [] };
+      grupos.push(grupo);
     }
+    grupo.pessoas.push({ nome: v.nome, observacao: v.observacao ?? '' });
   }
   if (grupos.length === 0) return [criarGrupoVoluntarioVazio()];
-  return [...grupos.map((g) => ({ ...g, nomes: [...g.nomes, ''] })), criarGrupoVoluntarioVazio()];
+  return [...grupos.map((g) => ({ ...g, pessoas: [...g.pessoas, pessoaVazia()] })), criarGrupoVoluntarioVazio()];
 }

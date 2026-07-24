@@ -7,8 +7,8 @@ import { ATENDIMENTOS_GRUPOS, type ChaveGrupoDinamico } from '@/lib/atendimentos
 import {
   atualizarListaDinamica,
   atualizarListaEstatisticas,
-  atualizarCampoGrupoVoluntario,
-  atualizarNomeGrupoVoluntario,
+  atualizarFuncaoGrupoVoluntario,
+  atualizarPessoaGrupoVoluntario,
   criarGrupoVoluntarioVazio,
   type LinhaEstatistica,
   type LinhaGrupoVoluntario,
@@ -88,15 +88,11 @@ export default function NovaViagemForm({
   const [gruposVoluntarios, setGruposVoluntarios] = useState<LinhaGrupoVoluntario[]>([criarGrupoVoluntarioVazio()]);
 
   function alterarFuncaoGrupo(index: number, valor: string) {
-    setGruposVoluntarios((atual) => atualizarCampoGrupoVoluntario(atual, index, 'funcao', valor));
+    setGruposVoluntarios((atual) => atualizarFuncaoGrupoVoluntario(atual, index, valor));
   }
 
-  function alterarObservacaoGrupo(index: number, valor: string) {
-    setGruposVoluntarios((atual) => atualizarCampoGrupoVoluntario(atual, index, 'observacao', valor));
-  }
-
-  function alterarNomeGrupo(grupoIndex: number, nomeIndex: number, valor: string) {
-    setGruposVoluntarios((atual) => atualizarNomeGrupoVoluntario(atual, grupoIndex, nomeIndex, valor));
+  function alterarPessoaGrupo(grupoIndex: number, pessoaIndex: number, campo: 'nome' | 'observacao', valor: string) {
+    setGruposVoluntarios((atual) => atualizarPessoaGrupoVoluntario(atual, grupoIndex, pessoaIndex, campo, valor));
   }
 
   const [itensAtividadeSaude, setItensAtividadeSaude] = useState<LinhaEstatistica[]>([{ nome: '', quantidade: '' }]);
@@ -408,42 +404,42 @@ export default function NovaViagemForm({
                     </button>
                   </div>
                 </label>
-                <div className="flex flex-col gap-2">
+                <datalist id={`lista-profissionais-voluntario-${gi}`}>
+                  {profissionaisDoCargo.map((p) => (
+                    <option key={p.id} value={p.nome} />
+                  ))}
+                </datalist>
+                <div className="flex flex-col gap-3">
                   <span className="text-xs font-semibold text-slate-500">Nome(s)</span>
-                  {grupo.nomes.map((nome, ni) => (
-                    <div key={ni}>
+                  {grupo.pessoas.map((pessoa, pi) => (
+                    <div key={pi} className="flex flex-col gap-2 rounded-lg border border-slate-100 p-3">
                       <input type="hidden" name="voluntario_funcao" value={grupo.funcao} />
                       <input
                         type="text"
                         name="voluntario_nome"
                         list={`lista-profissionais-voluntario-${gi}`}
-                        value={nome}
-                        onChange={(e) => alterarNomeGrupo(gi, ni, e.target.value)}
-                        placeholder={ni === 0 ? 'Escolha o cargo para filtrar os nomes' : 'Adicionar outro nome...'}
+                        value={pessoa.nome}
+                        onChange={(e) => alterarPessoaGrupo(gi, pi, 'nome', e.target.value)}
+                        placeholder={pi === 0 ? 'Escolha o cargo para filtrar os nomes' : 'Adicionar outro nome...'}
                         autoComplete="off"
                         className="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
                       />
-                      <input type="hidden" name="voluntario_observacao" value={grupo.observacao} />
+                      <details open={pessoa.observacao.trim() !== ''}>
+                        <summary className="cursor-pointer text-xs font-semibold text-primary-700">
+                          {pessoa.observacao.trim() !== '' ? 'Observação' : '+ Adicionar observação'}
+                        </summary>
+                        <textarea
+                          name="voluntario_observacao"
+                          value={pessoa.observacao}
+                          onChange={(e) => alterarPessoaGrupo(gi, pi, 'observacao', e.target.value)}
+                          placeholder="Auxiliando na triagem, na Farmácia..."
+                          rows={2}
+                          className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
+                        />
+                      </details>
                     </div>
                   ))}
-                  <datalist id={`lista-profissionais-voluntario-${gi}`}>
-                    {profissionaisDoCargo.map((p) => (
-                      <option key={p.id} value={p.nome} />
-                    ))}
-                  </datalist>
                 </div>
-                <details open={grupo.observacao.trim() !== ''}>
-                  <summary className="cursor-pointer text-xs font-semibold text-primary-700">
-                    {grupo.observacao.trim() !== '' ? 'Observação' : '+ Adicionar observação'}
-                  </summary>
-                  <textarea
-                    value={grupo.observacao}
-                    onChange={(e) => alterarObservacaoGrupo(gi, e.target.value)}
-                    placeholder="Auxiliando na triagem, na Farmácia..."
-                    rows={2}
-                    className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
-                  />
-                </details>
               </div>
             );
           })}
