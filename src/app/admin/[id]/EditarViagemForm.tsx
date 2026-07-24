@@ -130,14 +130,29 @@ export default function EditarViagemForm({
   const [itensAssistenciaSocial, setItensAssistenciaSocial] = useState<LinhaEstatistica[]>(() =>
     itensIniciais('assistencia_social_doacoes'),
   );
+  const [itensEspecialidadesMedicas, setItensEspecialidadesMedicas] = useState<LinhaEstatistica[]>(() =>
+    itensIniciais('especialidades_medicas'),
+  );
+  const [itensOutrosAtendimentosSaude, setItensOutrosAtendimentosSaude] = useState<LinhaEstatistica[]>(() =>
+    itensIniciais('outros_atendimentos_saude'),
+  );
+  const [itensAtividadesEvangelisticas, setItensAtividadesEvangelisticas] = useState<LinhaEstatistica[]>(() =>
+    itensIniciais('atividades_evangelisticas'),
+  );
 
   const itensPorGrupoDinamico: Record<ChaveGrupoDinamico, LinhaEstatistica[]> = {
     atividades_procedimentos_saude: itensAtividadeSaude,
     assistencia_social_doacoes: itensAssistenciaSocial,
+    especialidades_medicas: itensEspecialidadesMedicas,
+    outros_atendimentos_saude: itensOutrosAtendimentosSaude,
+    atividades_evangelisticas: itensAtividadesEvangelisticas,
   };
   const setItensPorGrupoDinamico: Record<ChaveGrupoDinamico, (v: LinhaEstatistica[]) => void> = {
     atividades_procedimentos_saude: setItensAtividadeSaude,
     assistencia_social_doacoes: setItensAssistenciaSocial,
+    especialidades_medicas: setItensEspecialidadesMedicas,
+    outros_atendimentos_saude: setItensOutrosAtendimentosSaude,
+    atividades_evangelisticas: setItensAtividadesEvangelisticas,
   };
 
   function alterarItemEstatistica(
@@ -194,6 +209,34 @@ export default function EditarViagemForm({
     if (grupoOrigem?.titulo === 'Atendimento médico' || grupoOrigem?.titulo === 'Atendimento odontológico') {
       calcularEnfermagemAutomatica(form);
     }
+  }
+
+  function renderListaDinamica(dinamico: { chave: ChaveGrupoDinamico; campoNome: string; campoQtd: string }) {
+    return (
+      <div className="mt-3 flex flex-col gap-2">
+        {itensPorGrupoDinamico[dinamico.chave].map((linha, i) => (
+          <div key={i} className="flex gap-2">
+            <Combobox
+              name={dinamico.campoNome}
+              options={camposEstatisticos[dinamico.chave] ?? []}
+              value={linha.nome}
+              onValueChange={(v) => alterarItemEstatistica(dinamico.chave, i, 'nome', v)}
+              placeholder={i === 0 ? 'Nome do item (ex.: Curativos)' : 'Adicionar outro item...'}
+              className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            />
+            <input
+              type="number"
+              name={dinamico.campoQtd}
+              min={0}
+              value={linha.quantidade}
+              onChange={(e) => alterarItemEstatistica(dinamico.chave, i, 'quantidade', e.target.value)}
+              placeholder="Qtd"
+              className="w-24 rounded-lg border border-slate-300 px-2 py-2 text-sm text-slate-900"
+            />
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (
@@ -441,31 +484,7 @@ export default function EditarViagemForm({
                 {grupo.titulo}
               </summary>
               {grupo.dinamico ? (
-                <div className="mt-3 flex flex-col gap-2">
-                  {itensPorGrupoDinamico[grupo.dinamico.chave].map((linha, i) => (
-                    <div key={i} className="flex gap-2">
-                      <Combobox
-                        name={grupo.dinamico!.campoNome}
-                        options={camposEstatisticos[grupo.dinamico!.chave] ?? []}
-                        value={linha.nome}
-                        onValueChange={(v) => alterarItemEstatistica(grupo.dinamico!.chave, i, 'nome', v)}
-                        placeholder={i === 0 ? 'Nome do item (ex.: Curativos)' : 'Adicionar outro item...'}
-                        className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
-                      />
-                      <input
-                        type="number"
-                        name={grupo.dinamico!.campoQtd}
-                        min={0}
-                        value={linha.quantidade}
-                        onChange={(e) =>
-                          alterarItemEstatistica(grupo.dinamico!.chave, i, 'quantidade', e.target.value)
-                        }
-                        placeholder="Qtd"
-                        className="w-24 rounded-lg border border-slate-300 px-2 py-2 text-sm text-slate-900"
-                      />
-                    </div>
-                  ))}
-                </div>
+                renderListaDinamica(grupo.dinamico)
               ) : (
                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                   {grupo.campos.map((campo) => (
@@ -487,6 +506,14 @@ export default function EditarViagemForm({
                       />
                     </label>
                   ))}
+                </div>
+              )}
+              {grupo.dinamicoExtra && (
+                <div className="mt-4">
+                  <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                    {grupo.dinamicoExtra.titulo}
+                  </h4>
+                  {renderListaDinamica(grupo.dinamicoExtra)}
                 </div>
               )}
             </details>

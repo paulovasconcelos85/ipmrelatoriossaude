@@ -194,14 +194,11 @@ export async function atualizarViagemIpm(
 
       const itensExtras: { campo_estatistico_id: string; quantidade: number }[] = [];
       for (const grupo of ATENDIMENTOS_GRUPOS) {
-        if (!grupo.dinamico) continue;
-        const itens = await resolverItensEstatisticos(
-          formData,
-          grupo.dinamico.chave,
-          grupo.dinamico.campoNome,
-          grupo.dinamico.campoQtd,
-        );
-        itensExtras.push(...itens);
+        const dinamicos = [grupo.dinamico, grupo.dinamicoExtra].filter((d): d is NonNullable<typeof d> => Boolean(d));
+        for (const dinamico of dinamicos) {
+          const itens = await resolverItensEstatisticos(formData, dinamico.chave, dinamico.campoNome, dinamico.campoQtd);
+          itensExtras.push(...itens);
+        }
       }
       if (itensExtras.length === 0) return null;
       const linhas = itensExtras.map((item) => ({ viagem_id: viagemId, ...item }));

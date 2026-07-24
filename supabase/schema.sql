@@ -280,11 +280,34 @@ create table if not exists public.atendimentos (
 
 create table if not exists public.campos_estatisticos (
   id uuid primary key default gen_random_uuid(),
-  grupo text not null check (grupo in ('atividades_procedimentos_saude', 'assistencia_social_doacoes')),
+  grupo text not null check (
+    grupo in (
+      'atividades_procedimentos_saude',
+      'assistencia_social_doacoes',
+      'especialidades_medicas',
+      'outros_atendimentos_saude',
+      'atividades_evangelisticas'
+    )
+  ),
   nome text not null,
   created_at timestamptz not null default now(),
   unique (grupo, nome)
 );
+
+-- Libera os novos grupos dinâmicos (Atendimento por especialidade, Outros atendimentos de saúde,
+-- Atividades evangelísticas) em bancos que já tinham a tabela criada com a constraint antiga
+-- (idempotente: refaz a constraint com o nome padrão).
+alter table public.campos_estatisticos drop constraint if exists campos_estatisticos_grupo_check;
+alter table public.campos_estatisticos add constraint campos_estatisticos_grupo_check
+  check (
+    grupo in (
+      'atividades_procedimentos_saude',
+      'assistencia_social_doacoes',
+      'especialidades_medicas',
+      'outros_atendimentos_saude',
+      'atividades_evangelisticas'
+    )
+  );
 
 create table if not exists public.atendimentos_extra (
   viagem_id uuid not null references public.viagens (id) on delete cascade,

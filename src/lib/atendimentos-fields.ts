@@ -6,7 +6,12 @@ export type AtendimentoField = {
 };
 
 /** Chave de agrupamento usada em campos_estatisticos.grupo/atendimentos_extra para os grupos dinâmicos. */
-export type ChaveGrupoDinamico = 'atividades_procedimentos_saude' | 'assistencia_social_doacoes';
+export type ChaveGrupoDinamico =
+  | 'atividades_procedimentos_saude'
+  | 'assistencia_social_doacoes'
+  | 'especialidades_medicas'
+  | 'outros_atendimentos_saude'
+  | 'atividades_evangelisticas';
 
 export type AtendimentoGrupo = {
   titulo: string;
@@ -23,6 +28,13 @@ export type AtendimentoGrupo = {
    * lista de nomes padrão usada para popular campos_estatisticos na migração inicial.
    */
   dinamico?: { chave: ChaveGrupoDinamico; campoNome: string; campoQtd: string };
+  /**
+   * Lista dinâmica adicional dentro de um grupo que também tem campos fixos (ex.: "Atendimento
+   * médico" continua com o total e as faixas etárias, mas ganha uma quebra por especialidade,
+   * onde o nome é digitado — autocompletando as já cadastradas em campos_estatisticos, ou
+   * cadastrando uma nova — e a quantidade ao lado). Os valores ficam em atendimentos_extra.
+   */
+  dinamicoExtra?: { chave: ChaveGrupoDinamico; campoNome: string; campoQtd: string; titulo: string };
 };
 
 export const ATENDIMENTOS_GRUPOS: AtendimentoGrupo[] = [
@@ -32,6 +44,12 @@ export const ATENDIMENTOS_GRUPOS: AtendimentoGrupo[] = [
     somaAutomatica: {
       total: 'atendimentos_medicos',
       parcelas: ['criancas_medico', 'adolescentes_medico', 'adultos_medico'],
+    },
+    dinamicoExtra: {
+      chave: 'especialidades_medicas',
+      campoNome: 'especialidade_medica_nome',
+      campoQtd: 'especialidade_medica_qtd',
+      titulo: 'Atendimentos por especialidade',
     },
     campos: [
       { name: 'atendimentos_medicos', label: 'Atendimentos médicos', destaque: true },
@@ -74,6 +92,11 @@ export const ATENDIMENTOS_GRUPOS: AtendimentoGrupo[] = [
   },
   {
     titulo: 'Outros atendimentos de saúde',
+    dinamico: {
+      chave: 'outros_atendimentos_saude',
+      campoNome: 'outro_atendimento_saude_item_nome',
+      campoQtd: 'outro_atendimento_saude_item_qtd',
+    },
     campos: [
       { name: 'atendimentos_fisioterapia', label: 'Fisioterapia' },
       { name: 'atendimentos_psicologia', label: 'Psicologia' },
@@ -85,6 +108,11 @@ export const ATENDIMENTOS_GRUPOS: AtendimentoGrupo[] = [
   },
   {
     titulo: 'Atividades evangelísticas',
+    dinamico: {
+      chave: 'atividades_evangelisticas',
+      campoNome: 'atividade_evangelistica_item_nome',
+      campoQtd: 'atividade_evangelistica_item_qtd',
+    },
     campos: [
       { name: 'atividades_evangelisticas', label: 'Atividades evangelísticas' },
       { name: 'evangelismo_palestra_infantil', label: 'Evangelismo/Palestra infantil' },
@@ -187,14 +215,21 @@ export function gruposAtendimentoComValores(viagem: {
   atendimentos: Record<string, number | null>;
   atendimentosExtras: ItemEstatisticoExtra[];
 }) {
-  return ATENDIMENTOS_GRUPOS.map((grupo) => ({
-    titulo: grupo.titulo,
-    campos: grupo.dinamico
+  return ATENDIMENTOS_GRUPOS.map((grupo) => {
+    const camposFixos = grupo.dinamico
       ? viagem.atendimentosExtras
           .filter((item) => item.grupo === grupo.dinamico!.chave)
           .map((item) => ({ label: item.nome, valor: item.quantidade, destaque: false }))
       : grupo.campos
           .map((campo) => ({ label: campo.label, valor: viagem.atendimentos[campo.name], destaque: campo.destaque }))
-          .filter((c) => typeof c.valor === 'number' && c.valor > 0),
-  })).filter((g) => g.campos.length > 0);
+          .filter((c) => typeof c.valor === 'number' && c.valor > 0);
+
+    const camposExtra = grupo.dinamicoExtra
+      ? viagem.atendimentosExtras
+          .filter((item) => item.grupo === grupo.dinamicoExtra!.chave)
+          .map((item) => ({ label: item.nome, valor: item.quantidade, destaque: false }))
+      : [];
+
+    return { titulo: grupo.titulo, campos: [...camposFixos, ...camposExtra] };
+  }).filter((g) => g.campos.length > 0);
 }
