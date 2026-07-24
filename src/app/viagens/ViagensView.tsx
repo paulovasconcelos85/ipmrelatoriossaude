@@ -8,8 +8,9 @@ import type { ViagemIpm } from '@/lib/viagens-ipm';
 
 type Modo = 'cards' | 'tabela';
 
-function tituloViagem(v: ViagemIpm): string {
-  return v.barco ?? v.parceiros[0] ?? v.tipo_transporte ?? 'Viagem sem barco/parceiro';
+/** Título usado quando não há barco cadastrado: primeiro parceiro ou o tipo de transporte. */
+function tituloViagemSemBarco(v: ViagemIpm): string {
+  return v.parceiros[0] ?? v.tipo_transporte ?? 'Viagem sem barco/parceiro';
 }
 
 function ViagemCard({
@@ -42,7 +43,14 @@ function ViagemCard({
               </span>
             )}
           </div>
-          <p className="break-words text-lg font-bold leading-snug text-primary-900">{tituloViagem(viagem)}</p>
+          <p className="break-words text-lg font-bold leading-snug text-primary-900">
+            {viagem.barco ?? tituloViagemSemBarco(viagem)}
+            {viagem.barco && viagem.parceirosComLocal.length > 0 && (
+              <span className="ml-2 text-sm font-semibold text-slate-500">
+                · {viagem.parceirosComLocal.join(', ')}
+              </span>
+            )}
+          </p>
           <p className="break-words text-sm text-slate-500">
             {formatarPeriodo(viagem.data_saida, viagem.data_chegada)}
             {viagem.tipo_missao && ` · ${viagem.tipo_missao}`}
@@ -201,12 +209,12 @@ export default function ViagensView({ viagens }: { viagens: ViagemIpm[] }) {
       </div>
 
       {modo === 'cards' ? (
-        <ul className="grid grid-cols-1 items-start gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+        <ul className="flex flex-col gap-3">
           {viagens.map((v) => (
             <ViagemCard key={v.id} viagem={v} aberto={abertos.has(v.id)} onToggle={() => alternar(v.id)} />
           ))}
           {viagens.length === 0 && (
-            <li className="col-span-full rounded-2xl border-2 border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm">
+            <li className="rounded-2xl border-2 border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm">
               Nenhuma viagem encontrada.
             </li>
           )}
