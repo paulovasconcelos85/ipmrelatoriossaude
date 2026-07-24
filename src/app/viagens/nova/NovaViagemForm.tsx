@@ -180,7 +180,12 @@ export default function NovaViagemForm({
     }
   }
 
-  function renderListaDinamica(dinamico: { chave: ChaveGrupoDinamico; campoNome: string; campoQtd: string }) {
+  function renderListaDinamica(dinamico: {
+    chave: ChaveGrupoDinamico;
+    campoNome: string;
+    campoQtd: string;
+    placeholderNome?: string;
+  }) {
     return (
       <div className="mt-3 flex flex-col gap-2">
         {itensPorGrupoDinamico[dinamico.chave].map((linha, i) => (
@@ -191,7 +196,7 @@ export default function NovaViagemForm({
               list={`lista-${dinamico.chave}`}
               value={linha.nome}
               onChange={(e) => alterarItemEstatistica(dinamico.chave, i, 'nome', e.target.value)}
-              placeholder={i === 0 ? 'Nome do item (ex.: Curativos)' : 'Adicionar outro item...'}
+              placeholder={i === 0 ? (dinamico.placeholderNome ?? 'Nome do item (ex.: Curativos)') : 'Adicionar outro item...'}
               autoComplete="off"
               className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
             />

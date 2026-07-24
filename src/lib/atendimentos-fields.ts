@@ -27,14 +27,20 @@ export type AtendimentoGrupo = {
    * opções raramente usadas, onde listar tudo fixo dificulta achar o campo certo. `campos` aqui vira só a
    * lista de nomes padrão usada para popular campos_estatisticos na migração inicial.
    */
-  dinamico?: { chave: ChaveGrupoDinamico; campoNome: string; campoQtd: string };
+  dinamico?: { chave: ChaveGrupoDinamico; campoNome: string; campoQtd: string; placeholderNome?: string };
   /**
    * Lista dinâmica adicional dentro de um grupo que também tem campos fixos (ex.: "Atendimento
    * médico" continua com o total e as faixas etárias, mas ganha uma quebra por especialidade,
    * onde o nome é digitado — autocompletando as já cadastradas em campos_estatisticos, ou
    * cadastrando uma nova — e a quantidade ao lado). Os valores ficam em atendimentos_extra.
    */
-  dinamicoExtra?: { chave: ChaveGrupoDinamico; campoNome: string; campoQtd: string; titulo: string };
+  dinamicoExtra?: {
+    chave: ChaveGrupoDinamico;
+    campoNome: string;
+    campoQtd: string;
+    titulo: string;
+    placeholderNome?: string;
+  };
 };
 
 export const ATENDIMENTOS_GRUPOS: AtendimentoGrupo[] = [
@@ -50,6 +56,7 @@ export const ATENDIMENTOS_GRUPOS: AtendimentoGrupo[] = [
       campoNome: 'especialidade_medica_nome',
       campoQtd: 'especialidade_medica_qtd',
       titulo: 'Atendimentos por especialidade',
+      placeholderNome: 'Nome da especialidade (ex.: Pediatria)',
     },
     campos: [
       { name: 'atendimentos_medicos', label: 'Atendimentos médicos', destaque: true },

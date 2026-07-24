@@ -211,7 +211,12 @@ export default function EditarViagemForm({
     }
   }
 
-  function renderListaDinamica(dinamico: { chave: ChaveGrupoDinamico; campoNome: string; campoQtd: string }) {
+  function renderListaDinamica(dinamico: {
+    chave: ChaveGrupoDinamico;
+    campoNome: string;
+    campoQtd: string;
+    placeholderNome?: string;
+  }) {
     return (
       <div className="mt-3 flex flex-col gap-2">
         {itensPorGrupoDinamico[dinamico.chave].map((linha, i) => (
@@ -221,7 +226,7 @@ export default function EditarViagemForm({
               options={camposEstatisticos[dinamico.chave] ?? []}
               value={linha.nome}
               onValueChange={(v) => alterarItemEstatistica(dinamico.chave, i, 'nome', v)}
-              placeholder={i === 0 ? 'Nome do item (ex.: Curativos)' : 'Adicionar outro item...'}
+              placeholder={i === 0 ? (dinamico.placeholderNome ?? 'Nome do item (ex.: Curativos)') : 'Adicionar outro item...'}
               className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
             />
             <input
