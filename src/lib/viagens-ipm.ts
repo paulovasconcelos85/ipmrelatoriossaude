@@ -24,6 +24,7 @@ export type ViagemIpm = {
   barco: string | null;
   coordenadores: string[];
   lideres_saude: string[];
+  lideres_equipe_parceira: string[];
   parceiros: string[];
   /** Nomes dos parceiros com cidade/país anexados quando preenchidos, ex.: "Nome (Cidade, País)" — só para exibição. */
   parceirosComLocal: string[];
@@ -43,6 +44,7 @@ export type ViagemIpm = {
   barco_id: string | null;
   coordenador_ids: string[];
   lider_saude_ids: string[];
+  lider_equipe_parceira_ids: string[];
   parceiro_ids: string[];
   comunidade_ids: string[];
 };
@@ -67,6 +69,9 @@ type ViagemRow = {
     | { posicao: number; profissional_id: string; profissionais: { nome: string } | null }[]
     | null;
   viagem_lideres_saude:
+    | { posicao: number; profissional_id: string; profissionais: { nome: string } | null }[]
+    | null;
+  viagem_lideres_equipe_parceira:
     | { posicao: number; profissional_id: string; profissionais: { nome: string } | null }[]
     | null;
   viagem_parceiros:
@@ -95,6 +100,7 @@ const SELECT_VIAGEM = `id, numero, ano, data_saida, data_chegada, dias_missao, t
        barcos(nome),
        viagem_coordenadores(posicao, profissional_id, profissionais(nome)),
        viagem_lideres_saude(posicao, profissional_id, profissionais(nome)),
+       viagem_lideres_equipe_parceira(posicao, profissional_id, profissionais(nome)),
        viagem_parceiros(posicao, parceiro_id, parceiros(nome, cidade, pais)),
        viagem_comunidades(posicao, comunidade_id, comunidades(nome)),
        viagem_voluntarios(funcao, observacao, profissionais(nome)),
@@ -115,6 +121,9 @@ function mapRow(row: ViagemRow): ViagemIpm {
 
   const coordenadoresOrdenados = (row.viagem_coordenadores ?? []).slice().sort((a, b) => a.posicao - b.posicao);
   const lideresOrdenados = (row.viagem_lideres_saude ?? []).slice().sort((a, b) => a.posicao - b.posicao);
+  const lideresParceiraOrdenados = (row.viagem_lideres_equipe_parceira ?? [])
+    .slice()
+    .sort((a, b) => a.posicao - b.posicao);
   const parceirosOrdenados = (row.viagem_parceiros ?? []).slice().sort((a, b) => a.posicao - b.posicao);
   const comunidadesOrdenadas = (row.viagem_comunidades ?? []).slice().sort((a, b) => a.posicao - b.posicao);
   const fotosOrdenadas = (row.viagem_fotos ?? []).slice().sort((a, b) => a.posicao - b.posicao);
@@ -137,6 +146,9 @@ function mapRow(row: ViagemRow): ViagemIpm {
       .map((c) => c.profissionais?.nome)
       .filter((nome): nome is string => Boolean(nome)),
     lideres_saude: lideresOrdenados.map((l) => l.profissionais?.nome).filter((nome): nome is string => Boolean(nome)),
+    lideres_equipe_parceira: lideresParceiraOrdenados
+      .map((l) => l.profissionais?.nome)
+      .filter((nome): nome is string => Boolean(nome)),
     parceiros: parceirosOrdenados.map((p) => p.parceiros?.nome).filter((nome): nome is string => Boolean(nome)),
     parceirosComLocal: parceirosOrdenados
       .filter((p) => Boolean(p.parceiros?.nome))
@@ -169,6 +181,7 @@ function mapRow(row: ViagemRow): ViagemIpm {
     barco_id: row.barco_id,
     coordenador_ids: coordenadoresOrdenados.map((c) => c.profissional_id),
     lider_saude_ids: lideresOrdenados.map((l) => l.profissional_id),
+    lider_equipe_parceira_ids: lideresParceiraOrdenados.map((l) => l.profissional_id),
     parceiro_ids: parceirosOrdenados.map((p) => p.parceiro_id),
     comunidade_ids: comunidadesOrdenadas.map((c) => c.comunidade_id),
   };

@@ -60,9 +60,16 @@ export async function criarViagemIpm(
       .map((v) => v.trim())
       .filter(Boolean);
 
-    const [coordenadorIds, liderIds] = await resolverGruposNomesParaIds('profissionais', [
+    const nomesLideresEquipeParceira = formData
+      .getAll('lideres_equipe_parceira')
+      .filter((v): v is string => typeof v === 'string')
+      .map((v) => v.trim())
+      .filter(Boolean);
+
+    const [coordenadorIds, liderIds, liderEquipeParceiraIds] = await resolverGruposNomesParaIds('profissionais', [
       nomesCoordenadores,
       nomesLideres,
+      nomesLideresEquipeParceira,
     ]);
 
     const nomesParceiros = formData
@@ -139,6 +146,20 @@ export async function criarViagemIpm(
       const { error: erroLideres } = await supabase.from('viagem_lideres_saude').insert(linhas);
       if (erroLideres) {
         return { erro: `Viagem salva, mas houve erro ao vincular líderes de saúde: ${erroLideres.message}` };
+      }
+    }
+
+    if (liderEquipeParceiraIds.length > 0) {
+      const linhas = liderEquipeParceiraIds.map((profissionalId, i) => ({
+        viagem_id: viagemId,
+        profissional_id: profissionalId,
+        posicao: i + 1,
+      }));
+      const { error: erroLideresEquipeParceira } = await supabase.from('viagem_lideres_equipe_parceira').insert(linhas);
+      if (erroLideresEquipeParceira) {
+        return {
+          erro: `Viagem salva, mas houve erro ao vincular líderes da equipe parceira: ${erroLideresEquipeParceira.message}`,
+        };
       }
     }
 

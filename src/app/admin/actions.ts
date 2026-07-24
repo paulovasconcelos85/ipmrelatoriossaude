@@ -61,6 +61,12 @@ export async function atualizarViagemIpm(
       .map((v) => v.trim())
       .filter(Boolean);
 
+    const nomesLideresEquipeParceira = formData
+      .getAll('lideres_equipe_parceira')
+      .filter((v): v is string => typeof v === 'string')
+      .map((v) => v.trim())
+      .filter(Boolean);
+
     const nomesParceiros = formData
       .getAll('parceiros')
       .filter((v): v is string => typeof v === 'string')
@@ -76,14 +82,14 @@ export async function atualizarViagemIpm(
     const [
       tipoTransporteId,
       barcoId,
-      [coordenadorIds, liderIds],
+      [coordenadorIds, liderIds, liderEquipeParceiraIds],
       todosParceirosIds,
       todasComunidadesIds,
       voluntarios,
     ] = await Promise.all([
       tipoTransporte ? obterOuCriarPorNome('tipos_transporte', tipoTransporte) : Promise.resolve(null),
       barco ? obterOuCriarPorNome('barcos', barco) : Promise.resolve(null),
-      resolverGruposNomesParaIds('profissionais', [nomesCoordenadores, nomesLideres]),
+      resolverGruposNomesParaIds('profissionais', [nomesCoordenadores, nomesLideres, nomesLideresEquipeParceira]),
       resolverNomesParaIds('parceiros', nomesParceiros),
       resolverNomesParaIds('comunidades', nomesComunidades),
       resolverVoluntarios(formData),
@@ -128,6 +134,22 @@ export async function atualizarViagemIpm(
       const linhas = liderIds.map((profissionalId, i) => ({ viagem_id: viagemId, profissional_id: profissionalId, posicao: i + 1 }));
       const { error } = await supabase!.from('viagem_lideres_saude').insert(linhas);
       return error ? `Viagem salva, mas houve erro ao vincular líderes de saúde: ${error.message}` : null;
+    }
+
+    async function sincronizarViagemLideresEquipeParceira(): Promise<string | null> {
+      const { error: erroRemover } = await supabase!
+        .from('viagem_lideres_equipe_parceira')
+        .delete()
+        .eq('viagem_id', viagemId);
+      if (erroRemover) return `Viagem salva, mas houve erro ao atualizar líderes da equipe parceira: ${erroRemover.message}`;
+      if (liderEquipeParceiraIds.length === 0) return null;
+      const linhas = liderEquipeParceiraIds.map((profissionalId, i) => ({
+        viagem_id: viagemId,
+        profissional_id: profissionalId,
+        posicao: i + 1,
+      }));
+      const { error } = await supabase!.from('viagem_lideres_equipe_parceira').insert(linhas);
+      return error ? `Viagem salva, mas houve erro ao vincular líderes da equipe parceira: ${error.message}` : null;
     }
 
     async function sincronizarViagemParceiros(): Promise<string | null> {
@@ -190,6 +212,7 @@ export async function atualizarViagemIpm(
     const erros = await Promise.all([
       sincronizarViagemCoordenadores(),
       sincronizarViagemLideresSaude(),
+      sincronizarViagemLideresEquipeParceira(),
       sincronizarViagemParceiros(),
       sincronizarViagemComunidades(),
       sincronizarViagemVoluntarios(),

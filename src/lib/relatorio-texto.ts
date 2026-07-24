@@ -73,6 +73,9 @@ export function montarDadosViagem(viagem: ViagemIpm): [string, string][] {
   if (viagem.tipo_transporte) dados.push(['Transporte', viagem.tipo_transporte]);
   if (viagem.coordenadores.length > 0) dados.push(['Coordenador(es)', juntarComE(viagem.coordenadores)]);
   if (viagem.lideres_saude.length > 0) dados.push(['Líder(es) de saúde', juntarComE(viagem.lideres_saude)]);
+  if (viagem.lideres_equipe_parceira.length > 0) {
+    dados.push(['Líder(es) da equipe parceira', juntarComE(viagem.lideres_equipe_parceira)]);
+  }
   if (viagem.parceirosComLocal.length > 0) dados.push(['Parceiros', juntarComE(viagem.parceirosComLocal)]);
   return dados;
 }

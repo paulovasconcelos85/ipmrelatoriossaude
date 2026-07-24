@@ -109,6 +109,14 @@ create table if not exists public.viagem_lideres_saude (
   primary key (viagem_id, profissional_id)
 );
 
+-- Líder(es) da equipe parceira da viagem (idem: uma viagem pode ter mais de um).
+create table if not exists public.viagem_lideres_equipe_parceira (
+  viagem_id uuid not null references public.viagens (id) on delete cascade,
+  profissional_id uuid not null references public.profissionais (id) on delete cascade,
+  posicao smallint not null default 1,
+  primary key (viagem_id, profissional_id)
+);
+
 -- Migra o coordenador/líder únicos já cadastrados para as novas tabelas (idempotente).
 insert into public.viagem_coordenadores (viagem_id, profissional_id, posicao)
 select id, coordenador_id, 1 from public.viagens where coordenador_id is not null
@@ -335,6 +343,7 @@ alter table public.viagens enable row level security;
 alter table public.viagem_parceiros enable row level security;
 alter table public.viagem_coordenadores enable row level security;
 alter table public.viagem_lideres_saude enable row level security;
+alter table public.viagem_lideres_equipe_parceira enable row level security;
 alter table public.viagem_comunidades enable row level security;
 alter table public.viagem_voluntarios enable row level security;
 alter table public.atendimentos enable row level security;
@@ -368,6 +377,9 @@ create policy "Permitir leitura publica de viagem_coordenadores" on public.viage
 
 drop policy if exists "Permitir leitura publica de viagem_lideres_saude" on public.viagem_lideres_saude;
 create policy "Permitir leitura publica de viagem_lideres_saude" on public.viagem_lideres_saude for select using (true);
+
+drop policy if exists "Permitir leitura publica de viagem_lideres_equipe_parceira" on public.viagem_lideres_equipe_parceira;
+create policy "Permitir leitura publica de viagem_lideres_equipe_parceira" on public.viagem_lideres_equipe_parceira for select using (true);
 
 drop policy if exists "Permitir leitura publica de viagem_comunidades" on public.viagem_comunidades;
 create policy "Permitir leitura publica de viagem_comunidades" on public.viagem_comunidades for select using (true);
@@ -418,6 +430,9 @@ create policy "Permitir escrita publica de viagem_coordenadores" on public.viage
 
 drop policy if exists "Permitir escrita publica de viagem_lideres_saude" on public.viagem_lideres_saude;
 create policy "Permitir escrita publica de viagem_lideres_saude" on public.viagem_lideres_saude for all using (true) with check (true);
+
+drop policy if exists "Permitir escrita publica de viagem_lideres_equipe_parceira" on public.viagem_lideres_equipe_parceira;
+create policy "Permitir escrita publica de viagem_lideres_equipe_parceira" on public.viagem_lideres_equipe_parceira for all using (true) with check (true);
 
 drop policy if exists "Permitir escrita publica de viagem_comunidades" on public.viagem_comunidades;
 create policy "Permitir escrita publica de viagem_comunidades" on public.viagem_comunidades for all using (true) with check (true);

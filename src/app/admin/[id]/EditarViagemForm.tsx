@@ -87,6 +87,14 @@ export default function EditarViagemForm({
     setLideresDigitados((atual) => atualizarListaDinamica(atual, index, valor));
   }
 
+  const [lideresEquipeParceiraDigitados, setLideresEquipeParceiraDigitados] = useState<string[]>(
+    viagem.lideres_equipe_parceira.length > 0 ? [...viagem.lideres_equipe_parceira, ''] : [''],
+  );
+
+  function alterarLiderEquipeParceira(index: number, valor: string) {
+    setLideresEquipeParceiraDigitados((atual) => atualizarListaDinamica(atual, index, valor));
+  }
+
   const [comunidadesDigitadas, setComunidadesDigitadas] = useState<string[]>(
     viagem.comunidades.length > 0 ? [...viagem.comunidades, ''] : [''],
   );
@@ -255,7 +263,7 @@ export default function EditarViagemForm({
 
       <section className="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-lg font-bold text-primary-900">Equipe</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="flex flex-col gap-2">
             <span className="text-sm font-semibold text-slate-600">Coordenador(es)</span>
             {coordenadoresDigitados.map((valor, i) => (
@@ -279,6 +287,19 @@ export default function EditarViagemForm({
                 value={valor}
                 onValueChange={(v) => alterarLider(i, v)}
                 placeholder={i === 0 ? 'Nome do líder de saúde' : 'Adicionar outro líder...'}
+              />
+            ))}
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-slate-600">Líder(es) da equipe parceira</span>
+            {lideresEquipeParceiraDigitados.map((valor, i) => (
+              <Combobox
+                key={i}
+                name="lideres_equipe_parceira"
+                options={profissionais.map((p) => p.nome)}
+                value={valor}
+                onValueChange={(v) => alterarLiderEquipeParceira(i, v)}
+                placeholder={i === 0 ? 'Nome do líder da equipe parceira' : 'Adicionar outro líder...'}
               />
             ))}
           </div>

@@ -71,6 +71,12 @@ export default function NovaViagemForm({
     setLideresDigitados((atual) => atualizarListaDinamica(atual, index, valor));
   }
 
+  const [lideresEquipeParceiraDigitados, setLideresEquipeParceiraDigitados] = useState<string[]>(['']);
+
+  function alterarLiderEquipeParceira(index: number, valor: string) {
+    setLideresEquipeParceiraDigitados((atual) => atualizarListaDinamica(atual, index, valor));
+  }
+
   const [comunidadesDigitadas, setComunidadesDigitadas] = useState<string[]>(['']);
 
   function alterarComunidade(index: number, valor: string) {
@@ -296,7 +302,7 @@ export default function NovaViagemForm({
 
       <section className="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-lg font-bold text-primary-900">Equipe</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="flex flex-col gap-2">
             <span className="text-sm font-semibold text-slate-600">Coordenador(es)</span>
             {coordenadoresDigitados.map((valor, i) => (
@@ -324,6 +330,22 @@ export default function NovaViagemForm({
                 value={valor}
                 onChange={(e) => alterarLider(i, e.target.value)}
                 placeholder={i === 0 ? 'Nome do líder de saúde' : 'Adicionar outro líder...'}
+                autoComplete="off"
+                className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
+              />
+            ))}
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-semibold text-slate-600">Líder(es) da equipe parceira</span>
+            {lideresEquipeParceiraDigitados.map((valor, i) => (
+              <input
+                key={i}
+                type="text"
+                name="lideres_equipe_parceira"
+                list="lista-profissionais"
+                value={valor}
+                onChange={(e) => alterarLiderEquipeParceira(i, e.target.value)}
+                placeholder={i === 0 ? 'Nome do líder da equipe parceira' : 'Adicionar outro líder...'}
                 autoComplete="off"
                 className="rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900"
               />

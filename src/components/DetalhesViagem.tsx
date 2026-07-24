@@ -55,6 +55,12 @@ export default function DetalhesViagem({ viagem }: { viagem: ViagemIpm }) {
             <dd className="break-words">{viagem.lideres_saude.join(', ')}</dd>
           </div>
         )}
+        {viagem.lideres_equipe_parceira.length > 0 && (
+          <div className="flex flex-col">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Líder(es) da equipe parceira</dt>
+            <dd className="break-words">{viagem.lideres_equipe_parceira.join(', ')}</dd>
+          </div>
+        )}
         {viagem.parceirosComLocal.length > 0 && (
           <div className="flex flex-col sm:col-span-2">
             <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Parceiros</dt>
